@@ -14,6 +14,7 @@ typedef uint64_t uint64;
 
 // uint = native unsigned counter, not fixed-width
 typedef unsigned int uint;
+typedef void (*NS_destructor_func)(void *);
 
 #ifndef MIN
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
@@ -46,3 +47,18 @@ typedef unsigned int uint;
 
 #define TOL 1e-6f
 #define TOL_SQ 1e-12f
+
+// clang-format off
+#define MAYBE_RESIZE(data, n, max, sz)                                         \
+  do {                                                                         \
+    if (n >= max) {                                                            \
+      max = MAX(max * 2, 4);                                                   \
+      void *new_ptr = malloc(max * sz);                                        \
+      if (data) {                                                              \
+        memcpy(new_ptr, data, n * sz);                                         \
+        free(data);                                                            \
+      }                                                                        \
+      data = new_ptr;                                                          \
+    }                                                                          \
+  } while (0)
+// clang-format on

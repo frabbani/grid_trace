@@ -2,15 +2,15 @@
 
 #include <math.h>
 
-struct GDTR_ray_s GDTR_create_ray(struct vec3_s p0, struct vec3_s p1) {
-  struct GDTR_ray_s ray;
+struct NS_ray_s NS_create_ray(struct vec3_s p0, struct vec3_s p1) {
+  struct NS_ray_s ray;
   ray.o = p0;
   ray.d = vec3_norm(point_vec(p0, p1));
   return ray;
 }
 
-struct GDTR_rayseg_s GDTR_create_rayseg(struct vec3_s p0, struct vec3_s p1) {
-  struct GDTR_rayseg_s seg;
+struct NS_rayseg_s NS_create_rayseg(struct vec3_s p0, struct vec3_s p1) {
+  struct NS_rayseg_s seg;
   seg.o = p0;
   seg.e = p1;
   seg.d = point_vec(p0, p1);
@@ -25,8 +25,8 @@ struct GDTR_rayseg_s GDTR_create_rayseg(struct vec3_s p0, struct vec3_s p1) {
   return seg;
 }
 
-bool GDTR_sphere_touches_plane(const struct GDTR_sphere_s *sphere,
-                               const struct GDTR_plane_s *plane,
+bool NS_sphere_touches_plane(const struct NS_sphere_s *sphere,
+                               const struct NS_plane_s *plane,
                                struct vec3_s *touch_p) {
   float dist = vec3_dot(sphere->c, plane->n) - plane->dist;
   if (fabsf(dist) <= sphere->radius) {
@@ -44,8 +44,8 @@ bool GDTR_sphere_touches_plane(const struct GDTR_sphere_s *sphere,
   return false;
 }
 
-bool GDTR_sphere_touches_ray(const struct GDTR_sphere_s *sphere,
-                             const struct GDTR_ray_s *ray) {
+bool NS_sphere_touches_ray(const struct NS_sphere_s *sphere,
+                             const struct NS_ray_s *ray) {
   struct vec3_s v_par, v_perp;
   struct vec3_s v = point_vec(ray->o, sphere->c);
   vec3_ortho_dec(ray->d, v, &v_par, &v_perp);
@@ -53,8 +53,8 @@ bool GDTR_sphere_touches_ray(const struct GDTR_sphere_s *sphere,
   return vec3_lensq(v_perp) <= SQ(sphere->radius);
 }
 
-float GDTR_ray_isect_plane(const struct GDTR_ray_s *ray,
-                           struct GDTR_plane_s plane) {
+float NS_ray_isect_plane(const struct NS_ray_s *ray,
+                           struct NS_plane_s plane) {
   float denom = vec3_dot(ray->d, plane.n);
   if (fabsf(denom) < TOL) {
     return -FLT_MAX; // parallel
@@ -63,8 +63,8 @@ float GDTR_ray_isect_plane(const struct GDTR_ray_s *ray,
   return numer / denom; // negative value means intersection is behind ray
 }
 
-uint GDTR_ray_isect_sphere(const struct GDTR_ray_s *ray,
-                           const struct GDTR_sphere_s *sphere, float *ts) {
+uint NS_ray_isect_sphere(const struct NS_ray_s *ray,
+                           const struct NS_sphere_s *sphere, float *ts) {
   // use the quadratic equation to solve 0, 1 or 2 hits
   // ray := o + td
   // sphere :+ (p - c)^2 = r^2
@@ -100,16 +100,16 @@ uint GDTR_ray_isect_sphere(const struct GDTR_ray_s *ray,
   }
 }
 
-bool GDTR_rayseg_isect_plane(const struct GDTR_rayseg_s *seg,
-                             struct GDTR_plane_s plane, float *t) {
-  float t_ = GDTR_ray_isect_plane(&seg->ray, plane);
+bool NS_rayseg_isect_plane(const struct NS_rayseg_s *seg,
+                             struct NS_plane_s plane, float *t) {
+  float t_ = NS_ray_isect_plane(&seg->ray, plane);
   if (t) {
     *t = t_;
   }
   return t_ >= 0.0f && t_ <= seg->len;
 }
 
-void GDTR_find_extents(const struct vec3_s *ps, uint nps, struct vec3_s *min,
+void NS_find_extents(const struct vec3_s *ps, uint nps, struct vec3_s *min,
                        struct vec3_s *max) {
   if (nps == 0) {
     *min = *max = vec3_zero();
@@ -127,7 +127,7 @@ void GDTR_find_extents(const struct vec3_s *ps, uint nps, struct vec3_s *min,
   }
 }
 
-void GDTR_aabb_init(struct GDTR_aabb_s *aabb, struct vec3_s min,
+void NS_aabb_init(struct NS_aabb_s *aabb, struct vec3_s min,
                     struct vec3_s max) {
   aabb->min = min;
   aabb->max = max;
@@ -136,8 +136,8 @@ void GDTR_aabb_init(struct GDTR_aabb_s *aabb, struct vec3_s min,
   aabb->radius = vec3_len(aabb->halfsize);
 }
 
-bool GDTR_aabb_clip_ray(const struct GDTR_aabb_s *aabb,
-                        const struct GDTR_ray_s *ray, float *ts) {
+bool NS_aabb_clip_ray(const struct NS_aabb_s *aabb,
+                        const struct NS_ray_s *ray, float *ts) {
   float tmin = 0.0f;
   float tmax = FLT_MAX;
 
@@ -175,8 +175,8 @@ bool GDTR_aabb_clip_ray(const struct GDTR_aabb_s *aabb,
   return true;
 }
 
-bool GDTR_aabb_touches_aabb(const struct GDTR_aabb_s *aabb0,
-                            const struct GDTR_aabb_s *aabb1) {
+bool NS_aabb_touches_aabb(const struct NS_aabb_s *aabb0,
+                            const struct NS_aabb_s *aabb1) {
   if (aabb0->max.x < aabb1->min.x || aabb0->min.x > aabb1->max.x)
     return false;
   if (aabb0->max.y < aabb1->min.y || aabb0->min.y > aabb1->max.y)

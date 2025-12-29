@@ -98,3 +98,27 @@ static bool v3eq(struct vec3_s a, struct vec3_s b, float eps) {
   } while (0)
 
 #define ASSERT_FALSE(expr) ASSERT_TRUE(!(expr))
+
+#define ASSERT_EQ_U(a, b)                                                      \
+  do {                                                                         \
+    g_tests_run++;                                                             \
+    uint _a = (uint)(a), _b = (uint)(b);                                       \
+    if (_a != _b) {                                                            \
+      g_tests_failed++;                                                        \
+      printf("[FAIL] %s:%d: ASSERT_EQ_U(%s,%s) got %u vs %u\n", __FILE__,      \
+             __LINE__, #a, #b, _a, _b);                                        \
+      return;                                                                  \
+    }                                                                          \
+  } while (0)
+
+#define ASSERT_EQ_I(a, b)                                                      \
+  do {                                                                         \
+    g_tests_run++;                                                             \
+    int _a = (int)(a), _b = (int)(b);                                          \
+    if (_a != _b) {                                                            \
+      g_tests_failed++;                                                        \
+      printf("[FAIL] %s:%d: ASSERT_EQ_I(%s,%s) got %d vs %d\n", __FILE__,      \
+             __LINE__, #a, #b, _a, _b);                                        \
+      return;                                                                  \
+    }                                                                          \
+  } while (0)

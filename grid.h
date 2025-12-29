@@ -15,8 +15,8 @@
     k = ux + uy * GRID_DIM + uz * GRID_DIM * GRID_DIM;                         \
   } while (0);
 
-struct GDTR_grid_cell_s {
-  struct GDTR_aabb_s aabb;
+struct NS_grid_cell_s {
+  struct NS_aabb_s aabb;
   struct ivec3_s coord;
   uint64 key;
 };

@@ -16,7 +16,7 @@
 static void test_create_ray(void) {
   struct vec3_s p0 = {0, 0, 0};
   struct vec3_s p1 = {10, 0, 0};
-  struct GDTR_ray_s r = GDTR_create_ray(p0, p1);
+  struct NS_ray_s r = NS_create_ray(p0, p1);
 
   ASSERT_V3EQ(r.o, p0);
 
@@ -33,7 +33,7 @@ static void test_create_ray(void) {
 static void test_create_rayseg(void) {
   struct vec3_s p0 = {1, 2, 3};
   struct vec3_s p1 = {1, 2, 13}; // +Z 10 units
-  struct GDTR_rayseg_s s = GDTR_create_rayseg(p0, p1);
+  struct NS_rayseg_s s = NS_create_rayseg(p0, p1);
 
   ASSERT_V3EQ(s.o, p0);
   ASSERT_V3EQ(s.e, p1);
@@ -49,12 +49,12 @@ static void test_create_rayseg(void) {
 
 static void test_ray_isect_plane_basic_hit(void) {
   // plane x = 5
-  struct GDTR_plane_s pl = {.n = (struct vec3_s){1, 0, 0}, .dist = 5.0f};
+  struct NS_plane_s pl = {.n = (struct vec3_s){1, 0, 0}, .dist = 5.0f};
 
   // ray from origin along +X
-  struct GDTR_ray_s r = {.o = {0, 0, 0}, .d = {1, 0, 0}};
+  struct NS_ray_s r = {.o = {0, 0, 0}, .d = {1, 0, 0}};
 
-  float t = GDTR_ray_isect_plane(&r, pl);
+  float t = NS_ray_isect_plane(&r, pl);
   // Accept either "t=5" or "negative/no-hit" semantics; but this is a clear hit
   // so should be 5
   ASSERT_FEQ(t, 5.0f);
@@ -67,12 +67,12 @@ static void test_ray_isect_plane_basic_hit(void) {
 
 static void test_ray_isect_plane_parallel_nohit(void) {
   // plane x = 5
-  struct GDTR_plane_s pl = {.n = (struct vec3_s){1, 0, 0}, .dist = 5.0f};
+  struct NS_plane_s pl = {.n = (struct vec3_s){1, 0, 0}, .dist = 5.0f};
 
   // ray along +Y, parallel to plane normal
-  struct GDTR_ray_s r = {.o = {0, 0, 0}, .d = {0, 1, 0}};
+  struct NS_ray_s r = {.o = {0, 0, 0}, .d = {0, 1, 0}};
 
-  float t = GDTR_ray_isect_plane(&r, pl);
+  float t = NS_ray_isect_plane(&r, pl);
 
   // Depending on your implementation, might return NAN, -1, or INFINITY.
   // We just assert it's not a valid forward hit (t>=0 and makes eval_plane==0).
@@ -86,13 +86,13 @@ static void test_ray_isect_plane_parallel_nohit(void) {
 
 static void test_ray_isect_sphere_two_hits(void) {
   // sphere centered at (5,0,0), r=1
-  struct GDTR_sphere_s sp = {.c = {5, 0, 0}, .radius = 1.0f};
+  struct NS_sphere_s sp = {.c = {5, 0, 0}, .radius = 1.0f};
 
   // ray from origin along +X
-  struct GDTR_ray_s r = {.o = {0, 0, 0}, .d = {1, 0, 0}};
+  struct NS_ray_s r = {.o = {0, 0, 0}, .d = {1, 0, 0}};
 
   float ts[2] = {0};
-  uint count = GDTR_ray_isect_sphere(&r, &sp, ts);
+  uint count = NS_ray_isect_sphere(&r, &sp, ts);
   ASSERT_TRUE(count == 2);
 
   // expect t=4 and t=6 (if d is unit). If d not unit, your implementation
@@ -115,13 +115,13 @@ static void test_ray_isect_sphere_two_hits(void) {
 
 static void test_ray_isect_sphere_tangent_one_hit(void) {
   // sphere centered at (5,1,0), r=1
-  struct GDTR_sphere_s sp = {.c = {5, 1, 0}, .radius = 1.0f};
+  struct NS_sphere_s sp = {.c = {5, 1, 0}, .radius = 1.0f};
 
   // ray along +X on y=0 line; tangent at (5,0,0)
-  struct GDTR_ray_s r = {.o = {0, 0, 0}, .d = {1, 0, 0}};
+  struct NS_ray_s r = {.o = {0, 0, 0}, .d = {1, 0, 0}};
 
   float ts[2] = {0};
-  uint count = GDTR_ray_isect_sphere(&r, &sp, ts);
+  uint count = NS_ray_isect_sphere(&r, &sp, ts);
 
   ASSERT_TRUE(count == 1);
 
@@ -132,12 +132,12 @@ static void test_ray_isect_sphere_tangent_one_hit(void) {
 
 static void test_ray_isect_sphere_miss_zero_hits(void) {
   // sphere centered at (5,2,0), r=1 -> ray on y=0 misses
-  struct GDTR_sphere_s sp = {.c = {5, 2, 0}, .radius = 1.0f};
+  struct NS_sphere_s sp = {.c = {5, 2, 0}, .radius = 1.0f};
 
-  struct GDTR_ray_s r = {.o = {0, 0, 0}, .d = {1, 0, 0}};
+  struct NS_ray_s r = {.o = {0, 0, 0}, .d = {1, 0, 0}};
 
   float ts[2] = {0};
-  uint count = GDTR_ray_isect_sphere(&r, &sp, ts);
+  uint count = NS_ray_isect_sphere(&r, &sp, ts);
   ASSERT_TRUE(count == 0);
 }
 
@@ -145,12 +145,12 @@ static void test_rayseg_isect_plane(void) {
   // segment from x=0 to x=10 crosses plane x=5
   struct vec3_s p0 = {0, 0, 0};
   struct vec3_s p1 = {10, 0, 0};
-  struct GDTR_rayseg_s seg = GDTR_create_rayseg(p0, p1);
+  struct NS_rayseg_s seg = NS_create_rayseg(p0, p1);
 
-  struct GDTR_plane_s pl = {.n = {1, 0, 0}, .dist = 5.0f};
+  struct NS_plane_s pl = {.n = {1, 0, 0}, .dist = 5.0f};
 
   float t = 0.0f;
-  bool hit = GDTR_rayseg_isect_plane(&seg, pl, &t);
+  bool hit = NS_rayseg_isect_plane(&seg, pl, &t);
   ASSERT_TRUE(hit);
 
   // Convert t to a point robustly:
@@ -178,53 +178,51 @@ static void test_rayseg_isect_plane(void) {
 
 static void test_sphere_touches_plane(void) {
   // plane y=0
-  struct GDTR_plane_s pl = {.n = {0, 1, 0}, .dist = 0.2f};
+  struct NS_plane_s pl = {.n = {0, 1, 0}, .dist = 0.2f};
 
   // sphere centered at (0,2,0) r=2 touches at origin
-  struct GDTR_sphere_s sp = {.c = {0, 2, 0}, .radius = 2.0f};
+  struct NS_sphere_s sp = {.c = {0, 2, 0}, .radius = 2.0f};
 
   struct vec3_s touch;
   struct vec3_s expected = {0, 1.8, 0};
-  bool ok = GDTR_sphere_touches_plane(&sp, &pl, &touch);
+  bool ok = NS_sphere_touches_plane(&sp, &pl, &touch);
   ASSERT_TRUE(ok);
   ASSERT_V3EQ(touch, expected);
 }
 
 static void test_sphere_touches_ray(void) {
   // sphere centered at (5,1,0) r=1 tangent to +X ray at y=0
-  struct GDTR_sphere_s sp = {.c = {5, 1, 0}, .radius = 1.0f};
-  struct GDTR_ray_s r = {.o = {0, 0, 0}, .d = {1, 0, 0}};
+  struct NS_sphere_s sp = {.c = {5, 1, 0}, .radius = 1.0f};
+  struct NS_ray_s r = {.o = {0, 0, 0}, .d = {1, 0, 0}};
 
-  ASSERT_TRUE(GDTR_sphere_touches_ray(&sp, &r));
+  ASSERT_TRUE(NS_sphere_touches_ray(&sp, &r));
 
   // move sphere up -> no touch
   sp.c.y = 2.1f;
-  ASSERT_FALSE(GDTR_sphere_touches_ray(&sp, &r));
+  ASSERT_FALSE(NS_sphere_touches_ray(&sp, &r));
 }
 
 static void test_aabb_clip_ray_miss(void) {
-  struct GDTR_aabb_s b;
-  GDTR_aabb_init(&b, vec3_set(0, 0, 0), vec3_set(1, 1, 1));
+  struct NS_aabb_s b;
+  NS_aabb_init(&b, vec3_set(0, 0, 0), vec3_set(1, 1, 1));
 
   // parallel to X slab and outside Y -> miss
-  struct GDTR_ray_s r = {.o = vec3_set(-10, 2.0f, 0.5f),
-                         .d = vec3_set(1, 0, 0)};
+  struct NS_ray_s r = {.o = vec3_set(-10, 2.0f, 0.5f), .d = vec3_set(1, 0, 0)};
   float ts[2] = {123, 456};
 
-  uint n = GDTR_aabb_clip_ray(&b, &r, ts);
+  uint n = NS_aabb_clip_ray(&b, &r, ts);
   ASSERT_TRUE(n == 0);
 }
 
 static void test_aabb_clip_ray_two_hits_through(void) {
-  struct GDTR_aabb_s b;
-  GDTR_aabb_init(&b, vec3_set(0, 0, 0), vec3_set(1, 1, 1));
+  struct NS_aabb_s b;
+  NS_aabb_init(&b, vec3_set(0, 0, 0), vec3_set(1, 1, 1));
 
   // enters at x=0, exits at x=1
-  struct GDTR_ray_s r = {.o = vec3_set(-10, 0.5f, 0.5f),
-                         .d = vec3_set(1, 0, 0)};
+  struct NS_ray_s r = {.o = vec3_set(-10, 0.5f, 0.5f), .d = vec3_set(1, 0, 0)};
   float ts[2] = {0, 0};
 
-  bool hit = GDTR_aabb_clip_ray(&b, &r, ts);
+  bool hit = NS_aabb_clip_ray(&b, &r, ts);
   ASSERT_TRUE(hit == true);
 
   // Should be ordered with this d, but don't assume
@@ -250,15 +248,15 @@ static void test_aabb_clip_ray_two_hits_through(void) {
 }
 
 static void test_aabb_clip_ray_start_inside(void) {
-  struct GDTR_aabb_s b;
-  GDTR_aabb_init(&b, vec3_set(0, 0, 0), vec3_set(1, 1, 1));
+  struct NS_aabb_s b;
+  NS_aabb_init(&b, vec3_set(0, 0, 0), vec3_set(1, 1, 1));
 
   // ray origin inside, should clamp entry to t=0 for ray semantics
-  struct GDTR_ray_s r = {.o = vec3_set(0.25f, 0.25f, 0.25f),
-                         .d = vec3_set(1, 0, 0)};
+  struct NS_ray_s r = {.o = vec3_set(0.25f, 0.25f, 0.25f),
+                       .d = vec3_set(1, 0, 0)};
   float ts[2] = {0, 0};
 
-  bool hit = GDTR_aabb_clip_ray(&b, &r, ts);
+  bool hit = NS_aabb_clip_ray(&b, &r, ts);
   ASSERT_TRUE(hit == true);
 
   ASSERT_TRUE(ts[0] >= -EPS);
@@ -270,16 +268,16 @@ static void test_aabb_clip_ray_start_inside(void) {
 }
 
 static void test_aabb_clip_ray_parallel_inside_slab(void) {
-  struct GDTR_aabb_s b;
-  GDTR_aabb_init(&b, vec3_set(0, 0, 0), vec3_set(1, 1, 1));
+  struct NS_aabb_s b;
+  NS_aabb_init(&b, vec3_set(0, 0, 0), vec3_set(1, 1, 1));
 
   // Parallel to Y/Z (d.y=0, d.z=0), inside their slabs.
   // Should still hit through X.
-  struct GDTR_ray_s r = {.o = vec3_set(-2.0f, 0.25f, 0.75f),
-                         .d = vec3_set(1, 0, 0)};
+  struct NS_ray_s r = {.o = vec3_set(-2.0f, 0.25f, 0.75f),
+                       .d = vec3_set(1, 0, 0)};
   float ts[2] = {0, 0};
 
-  bool hit = GDTR_aabb_clip_ray(&b, &r, ts);
+  bool hit = NS_aabb_clip_ray(&b, &r, ts);
   ASSERT_TRUE(hit);
 
   struct vec3_s p0 = RAY_AT(r, ts[0]);
@@ -291,14 +289,34 @@ static void test_aabb_clip_ray_parallel_inside_slab(void) {
 }
 
 static void test_aabb_clip_ray_parallel_outside_slab_miss(void) {
-  struct GDTR_aabb_s b;
-  GDTR_aabb_init(&b, vec3_set(0, 0, 0), vec3_set(1, 1, 1));
+  struct NS_aabb_s b;
+  NS_aabb_init(&b, vec3_set(0, 0, 0), vec3_set(1, 1, 1));
 
   // Parallel to X axis slabs (d.x == 0), and o.x is outside [0,1] => no hit.
-  struct GDTR_ray_s r = {.o = vec3_set(2.0f, 0.5f, 0.5f),
-                         .d = vec3_set(0.0f, 1.0f, 0.0f)};
+  struct NS_ray_s r = {.o = vec3_set(2.0f, 0.5f, 0.5f),
+                       .d = vec3_set(0.0f, 1.0f, 0.0f)};
   float ts[2] = {0, 0};
 
-  bool hit = GDTR_aabb_clip_ray(&b, &r, ts);
+  bool hit = NS_aabb_clip_ray(&b, &r, ts);
   ASSERT_FALSE(hit);
+}
+
+static void test_geom(void) {
+  printf("[geometry] begin test:\n");
+  test_create_ray();
+  test_create_rayseg();
+  test_ray_isect_plane_basic_hit();
+  test_ray_isect_plane_parallel_nohit();
+  test_ray_isect_sphere_two_hits();
+  test_ray_isect_sphere_tangent_one_hit();
+  test_ray_isect_sphere_miss_zero_hits();
+  test_rayseg_isect_plane();
+  test_sphere_touches_plane();
+  test_sphere_touches_ray();
+  test_aabb_clip_ray_miss();
+  test_aabb_clip_ray_two_hits_through();
+  test_aabb_clip_ray_start_inside();
+  test_aabb_clip_ray_parallel_inside_slab();
+  test_aabb_clip_ray_parallel_outside_slab_miss();
+  printf("[geometry] tests run: %d, failed: %d\n", g_tests_run, g_tests_failed);
 }
