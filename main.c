@@ -7,15 +7,17 @@
 
 #include "test_array.h"
 #include "test_geom.h"
+#include "test_hash.h"
 
 int g_tests_run = 0;
 int g_tests_failed = 0;
 
 int main(int argc, char *args[]) {
   printf("hello world!\n");
-  test_geom();
-  test_array();
-  test_reuse();
+  // run_geom_tests();
+  run_array_tests();
+  // run_reuse_array_tests();
+  run_hash_table_tests();
   printf("goodbye!\n");
   return 0;
 }

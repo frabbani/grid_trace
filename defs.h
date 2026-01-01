@@ -15,6 +15,7 @@ typedef uint64_t uint64;
 // uint = native unsigned counter, not fixed-width
 typedef unsigned int uint;
 typedef void (*NS_destructor_func)(void *);
+typedef void (*NS_move_func)(void *, void *);
 
 #ifndef MIN
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
@@ -53,7 +54,7 @@ typedef void (*NS_destructor_func)(void *);
   do {                                                                         \
     if (n >= max) {                                                            \
       max = MAX(max * 2, 4);                                                   \
-      void *new_ptr = malloc(max * sz);                                        \
+      void *new_ptr = NS_new(max * sz);                                        \
       if (data) {                                                              \
         memcpy(new_ptr, data, n * sz);                                         \
         free(data);                                                            \
@@ -62,3 +63,6 @@ typedef void (*NS_destructor_func)(void *);
     }                                                                          \
   } while (0)
 // clang-format on
+
+#define PTR_SZ (sizeof(void *))
+#define NS_new(size) malloc(size)

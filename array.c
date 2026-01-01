@@ -5,13 +5,13 @@
 
 struct NS_array_s *NS_create_array_(uint32 elem_size, uint32 max_prelim_elems,
                                     uint32 grow, const char *file, int line) {
-  struct NS_array_s *array = malloc(sizeof(struct NS_array_s));
+  struct NS_array_s *array = NS_new(sizeof(struct NS_array_s));
   if (!array)
     return NULL;
 
   max_prelim_elems = MAX(max_prelim_elems, 1);
   grow = MAX(grow, 1);
-  array->data = malloc(elem_size * max_prelim_elems);
+  array->data = NS_new(elem_size * max_prelim_elems);
   if (!array->data) {
     free(array);
     return NULL;
@@ -47,7 +47,7 @@ void NS_array_add(struct NS_array_s *array, const void *elem) {
 
   if (array->num_elems >= array->max_elems) {
     array->max_elems += array->grow;
-    void *new_data = malloc(array->elem_size * array->max_elems);
+    void *new_data = NS_new(array->elem_size * array->max_elems);
     if (!new_data) {
       printf("allocation failure...\n");
       return;
@@ -65,16 +65,28 @@ void NS_array_add(struct NS_array_s *array, const void *elem) {
 struct NS_reuse_array_s *NS_create_reuse_array_(uint elem_size, uint max_elems,
                                                 uint grow, const char *file,
                                                 int line) {
-  struct NS_reuse_array_s *reuse = malloc(sizeof(struct NS_reuse_array_s));
+  struct NS_reuse_array_s *reuse = NS_new(sizeof(struct NS_reuse_array_s));
   reuse->array = NS_create_array_(elem_size, max_elems, grow, file, line);
   reuse->used_max = reuse->array->max_elems;
-  reuse->used = malloc(reuse->used_max);
+  reuse->used = NS_new(reuse->used_max);
   memset(reuse->used, 0, reuse->used_max);
   reuse->avail_count = 0;
   reuse->avail_max = 32;
-  reuse->available = malloc(sizeof(uint) * reuse->avail_max);
+  reuse->available = NS_new(sizeof(uint) * reuse->avail_max);
+  reuse->file = file;
   reuse->line = line;
   return reuse;
+}
+
+void NS_array_swap_free(struct NS_array_s *array, uint32 index) {
+  if (!array || index >= array->num_elems)
+    return;
+  if (array->num_elems > 1) {
+    void *elem = NS_array_get(array, index);
+    void *last = NS_array_get(array, array->num_elems - 1);
+    memcpy(elem, last, array->elem_size);
+  }
+  --array->num_elems;
 }
 
 void NS_destroy_reuse_array(struct NS_reuse_array_s **array) {
@@ -100,7 +112,7 @@ uint NS_reuse_array_add(struct NS_reuse_array_s *array, const void *elem) {
   NS_array_add(array->array, elem);
   uint new_max = array->array->max_elems;
   if (new_max > old_max) {
-    uint8 *new_used = malloc(new_max);
+    uint8 *new_used = NS_new(new_max);
     memcpy(new_used, array->used, old_max);
     memset(new_used + old_max, 0, new_max - old_max);
     free(array->used);
@@ -117,6 +129,7 @@ void *NS_reuse_array_get(struct NS_reuse_array_s *array, uint index) {
     return NULL;
   if (!array->used[index])
     return NULL;
+  printf("%s - used: %u\n", __func__, array->used[index]);
   return NS_array_get(array->array, index);
 }
 

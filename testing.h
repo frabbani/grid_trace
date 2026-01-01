@@ -64,41 +64,6 @@ static bool v3eq(struct vec3_s a, struct vec3_s b, float eps) {
 
 #define ASSERT_FALSE(expr) ASSERT_TRUE(!(expr))
 
-#define ASSERT_FEQ(a, b)                                                       \
-  do {                                                                         \
-    g_tests_run++;                                                             \
-    float _aa = (a), _bb = (b);                                                \
-    if (!feq(_aa, _bb, EPS)) {                                                 \
-      g_tests_failed++;                                                        \
-      printf("[FAIL] %s:%d: ASSERT_FEQ(%s,%s) got %.9g vs %.9g\n", __FILE__,   \
-             __LINE__, #a, #b, (double)_aa, (double)_bb);                      \
-    }                                                                          \
-  } while (0)
-
-#define ASSERT_V3EQ(a, b)                                                      \
-  do {                                                                         \
-    g_tests_run++;                                                             \
-    struct vec3_s _aa = (a), _bb = (b);                                        \
-    if (!v3eq(_aa, _bb, EPS)) {                                                \
-      g_tests_failed++;                                                        \
-      printf("[FAIL] %s:%d: ASSERT_V3EQ(%s,%s) got (%.6g %.6g %.6g) vs (%.6g " \
-             "%.6g %.6g)\n",                                                   \
-             __FILE__, __LINE__, #a, #b, (double)_aa.x, (double)_aa.y,         \
-             (double)_aa.z, (double)_bb.x, (double)_bb.y, (double)_bb.z);      \
-    }                                                                          \
-  } while (0)
-
-#define ASSERT_TRUE(expr)                                                      \
-  do {                                                                         \
-    g_tests_run++;                                                             \
-    if (!(expr)) {                                                             \
-      g_tests_failed++;                                                        \
-      printf("[FAIL] %s:%d: ASSERT_TRUE(%s)\n", __FILE__, __LINE__, #expr);    \
-    }                                                                          \
-  } while (0)
-
-#define ASSERT_FALSE(expr) ASSERT_TRUE(!(expr))
-
 #define ASSERT_EQ_U(a, b)                                                      \
   do {                                                                         \
     g_tests_run++;                                                             \

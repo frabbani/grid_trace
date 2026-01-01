@@ -521,7 +521,35 @@ static void test_reuse_get_after_reuse_returns_new_data(void) {
   NS_destroy_reuse_array(&r);
 }
 
-static void test_reuse(void) {
+static void test_array_swap_free_middle(void) {
+  struct NS_array_s *a = NS_create_array(sizeof(int), 4, 4);
+  ASSERT_TRUE(a != NULL);
+
+  int v0 = 10, v1 = 20, v2 = 30, v3 = 40;
+  NS_array_add(a, &v0);
+  NS_array_add(a, &v1);
+  NS_array_add(a, &v2);
+  NS_array_add(a, &v3);
+
+  ASSERT_EQ_U(a->num_elems, 4);
+
+  // remove index 1 (value 20). last (40) should move into index 1.
+  NS_array_swap_free(a, 1);
+
+  ASSERT_EQ_U(a->num_elems, 3);
+
+  int *e0 = (int *)NS_array_get(a, 0);
+  int *e1 = (int *)NS_array_get(a, 1);
+  int *e2 = (int *)NS_array_get(a, 2);
+
+  ASSERT_EQ_I(*e0, 10);
+  ASSERT_EQ_I(*e1, 40); // swapped from end
+  ASSERT_EQ_I(*e2, 30);
+
+  NS_destroy_array(&a);
+}
+
+static void run_reuse_array_tests(void) {
   printf("[reuse_array] begin test:\n");
   test_reuse_create_basic();
   test_reuse_add_returns_sequential_indices();
@@ -539,11 +567,12 @@ static void test_reuse(void) {
   test_reuse_get_basic_live_and_freed();
   test_reuse_get_out_of_range_and_null_array();
   test_reuse_get_after_reuse_returns_new_data();
+  test_array_swap_free_middle();
   printf("[reuse_array] tests run: %d, failed: %d\n", g_tests_run,
          g_tests_failed);
 }
 
-static void test_array(void) {
+static void run_array_tests(void) {
   printf("[array] begin test:\n");
   test_array_create_destroy();
   test_array_create_max_elems_and_grow_min_1();

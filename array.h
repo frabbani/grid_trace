@@ -21,8 +21,10 @@ void *NS_array_get(const struct NS_array_s *array, uint32 index);
 
 void NS_array_add(struct NS_array_s *array, const void *elem);
 
+void NS_array_swap_free(struct NS_array_s *array, uint32 index);
+
 // clang-format off
-#define NS_create_array(t, max, grow) NS_create_array_(sizeof(t), max, grow, __FILE__, __LINE__)
+#define NS_create_array(t, max, grow) NS_create_array_(t, max, grow, __FILE__, __LINE__)
 // clang-format on
 
 struct NS_reuse_array_s {
@@ -32,6 +34,7 @@ struct NS_reuse_array_s {
   uint *available;
   uint avail_count;
   uint avail_max;
+  const char *file;
   int line;
 };
 
@@ -48,5 +51,5 @@ void *NS_reuse_array_get(struct NS_reuse_array_s *array, uint index);
 void NS_reuse_array_free(struct NS_reuse_array_s *array, uint index);
 
 // clang-format off
-#define NS_create_reuse_array(t, max, grow) NS_create_array_(sizeof(t), max, grow, __FILE__, __LINE__)
+#define NS_create_reuse_array(t, max, grow) NS_create_reuse_array_(sizeof(t), max, grow, __FILE__, __LINE__)
 // clang-format on

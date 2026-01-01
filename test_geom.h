@@ -301,7 +301,7 @@ static void test_aabb_clip_ray_parallel_outside_slab_miss(void) {
   ASSERT_FALSE(hit);
 }
 
-static void test_geom(void) {
+static void run_geom_tests(void) {
   printf("[geometry] begin test:\n");
   test_create_ray();
   test_create_rayseg();
