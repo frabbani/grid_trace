@@ -148,7 +148,7 @@ static void test_rehash_preserves_entries(void) {
   // factor. Even if it doesn't trigger due to your factor, this still validates
   // correctness.
   enum { N = 5000 };
-  int *vals = (int *)malloc(sizeof(int) * N);
+  int *vals = (int *)GridTr_new(sizeof(int) * N);
   ASSERT_TRUE(vals != NULL);
 
   for (int i = 0; i < N; i++) {

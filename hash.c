@@ -40,8 +40,8 @@ void GridTr_destroy_hash_table(struct GridTr_hash_table_s **table,
   for (uint i = 0; i < ptr->size; i++) {
     GridTr_destroy_array(&ptr->entries[i]);
   }
-  free(ptr->entries);
-  free(ptr);
+  GridTr_free(ptr->entries);
+  GridTr_free(ptr);
   *table = NULL;
 }
 
@@ -76,7 +76,7 @@ void GridTr_rehash_hash_table(struct GridTr_hash_table_s *table) {
   for (uint i = 0; i < old_size; i++) {
     GridTr_destroy_array(&table->entries[i]);
   }
-  free(table->entries);
+  GridTr_free(table->entries);
   table->entries = new_entries;
   table->size = new_size;
 }

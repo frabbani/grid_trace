@@ -2,6 +2,13 @@
 
 #include <math.h>
 
+struct GridTr_plane_s GridTr_create_plane(struct vec3_s n, struct vec3_s p) {
+  struct GridTr_plane_s plane;
+  plane.n = vec3_norm(n);
+  plane.dist = vec3_dot(plane.n, p);
+  return plane;
+}
+
 struct GridTr_ray_s GridTr_create_ray(struct vec3_s p0, struct vec3_s p1) {
   struct GridTr_ray_s ray;
   ray.o = p0;
@@ -110,8 +117,8 @@ bool GridTr_rayseg_isect_plane(const struct GridTr_rayseg_s *seg,
   return t_ >= 0.0f && t_ <= seg->len;
 }
 
-void GridTr_find_extents(const struct vec3_s *ps, uint nps, struct vec3_s *min,
-                         struct vec3_s *max) {
+void GridTr_find_exts(const struct vec3_s *ps, uint nps, struct vec3_s *min,
+                      struct vec3_s *max) {
   if (nps == 0) {
     *min = *max = vec3_zero();
     return;

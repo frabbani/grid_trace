@@ -43,6 +43,7 @@ struct mat3_s {
   float es[3][3];
 };
 
+struct ivec3_s ivec3_set(int x, int y, int z);
 uint64 ivec3_fnv1a(struct ivec3_s v);
 
 struct vec2_s vec2_set(float x, float y);

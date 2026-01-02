@@ -8,6 +8,8 @@ struct GridTr_plane_s {
   float dist;
 };
 
+struct GridTr_plane_s GridTr_create_plane(struct vec3_s n, struct vec3_s p);
+
 #define eval_plane(pl, p) (vec3_dot(p, pl.n) - pl.dist)
 
 struct GridTr_sphere_s {
@@ -61,8 +63,8 @@ uint GridTr_ray_isect_sphere(const struct GridTr_ray_s *ray,
 bool GridTr_rayseg_isect_plane(const struct GridTr_rayseg_s *seg,
                                struct GridTr_plane_s plane, float *t);
 
-void GridTr_find_extents(const struct vec3_s *ps, uint nps, struct vec3_s *min,
-                         struct vec3_s *max);
+void GridTr_find_exts(const struct vec3_s *ps, uint nps, struct vec3_s *min,
+                      struct vec3_s *max);
 
 void GridTr_aabb_init(struct GridTr_aabb_s *aabb, struct vec3_s min,
                       struct vec3_s max);

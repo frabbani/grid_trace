@@ -33,12 +33,12 @@ static struct gc_s *gc = NULL;
 
 void make_gc(void) {
   if (!gc) {
-    gc = (struct gc_s *)malloc(sizeof(struct gc_s));
+    gc = (struct gc_s *)GridTr_new(sizeof(struct gc_s));
     if (!gc)
       printf("well shit...\n");
 
     gc->to_sweep = GridTr_create_array(sizeof(struct g_s), 1024, 1024);
-    gc->dtors = (struct dtor_s *)malloc(256 * sizeof(struct dtor_s));
+    gc->dtors = (struct dtor_s *)GridTr_new(256 * sizeof(struct dtor_s));
     gc->num_dtors = 0;
     gc->max_dtors = 256;
     gc->sort_dtors = false;
@@ -96,7 +96,7 @@ void *GridTr_allocate_for_garbage_collection(const char *type, size_t size) {
   if (!gc || !type || size == 0)
     return NULL;
 
-  void *ptr = malloc(size);
+  void *ptr = GridTr_new(size);
   if (!ptr)
     return NULL;
 
@@ -118,7 +118,7 @@ void *GridTr_allocate_multiple_for_garbage_collection(const char *type,
   if (!gc || !type || size == 0 || count == 0)
     return NULL;
 
-  void *ptr = malloc(size * count);
+  void *ptr = GridTr_new(size * count);
   if (!ptr)
     return NULL;
 
@@ -154,13 +154,13 @@ void GridTr_collect_garbage() {
         }
       }
     }
-    free(g->data);
+    GridTr_free(g->data);
     GridTr_array_swap_free(gc->to_sweep,
                            i); // no swap because we are freeing last every time
   }
 
   GridTr_destroy_array(&gc->to_sweep);
-  free(gc->dtors);
-  free(gc);
+  GridTr_free(gc->dtors);
+  GridTr_free(gc);
   gc = NULL;
 }

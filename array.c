@@ -15,7 +15,7 @@ struct GridTr_array_s *GridTr_create_array_(uint32 elem_size,
   grow = MAX(grow, 1);
   array->data = GridTr_new(elem_size * max_prelim_elems);
   if (!array->data) {
-    free(array);
+    GridTr_free(array);
     return NULL;
   }
 
@@ -38,8 +38,8 @@ void GridTr_destroy_array(struct GridTr_array_s **array) {
   if (!array || !*array)
     return;
 
-  free((*array)->data);
-  free(*array);
+  GridTr_free((*array)->data);
+  GridTr_free(*array);
   *array = NULL;
 }
 
@@ -61,7 +61,7 @@ void GridTr_array_add(struct GridTr_array_s *array, const void *elem) {
       return;
     }
     memcpy(new_data, array->data, array->elem_size * array->num_elems);
-    free(array->data);
+    GridTr_free(array->data);
     array->data = new_data;
   }
 
@@ -103,9 +103,9 @@ void GridTr_destroy_reuse_array(struct GridTr_reuse_array_s **array) {
     return;
   }
   GridTr_destroy_array(&(*array)->array);
-  free((*array)->used);
-  free((*array)->available);
-  free(*array);
+  GridTr_free((*array)->used);
+  GridTr_free((*array)->available);
+  GridTr_free(*array);
   *array = NULL;
 }
 
@@ -126,7 +126,7 @@ uint GridTr_reuse_array_add(struct GridTr_reuse_array_s *array,
     uint8 *new_used = GridTr_new(new_max);
     memcpy(new_used, array->used, old_max);
     memset(new_used + old_max, 0, new_max - old_max);
-    free(array->used);
+    GridTr_free(array->used);
     array->used = new_used;
     array->used_max = new_max;
   }

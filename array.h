@@ -17,13 +17,13 @@ struct GridTr_array_s *GridTr_create_array_(uint32 elem_size,
                                             uint32 grow, const char *file,
                                             int line);
 
-void GridTr_destroy_array(struct GridTr_array_s **array);
-
 void GridTr_clear_array(struct GridTr_array_s *array);
 
-void *GridTr_array_get(struct GridTr_array_s *array, uint32 index);
+void GridTr_destroy_array(struct GridTr_array_s **array);
 
 void GridTr_array_add(struct GridTr_array_s *array, const void *elem);
+
+void *GridTr_array_get(struct GridTr_array_s *array, uint32 index);
 
 void GridTr_array_swap_free(struct GridTr_array_s *array, uint32 index);
 
