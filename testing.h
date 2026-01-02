@@ -1,7 +1,11 @@
 #pragma once
 
 #include "vec.h"
+
 #include <math.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
 
 extern int g_tests_run;
 extern int g_tests_failed;

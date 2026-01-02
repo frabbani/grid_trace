@@ -15,8 +15,16 @@
     k = ux + uy * GRID_DIM + uz * GRID_DIM * GRID_DIM;                         \
   } while (0);
 
-struct NS_grid_cell_s {
-  struct NS_aabb_s aabb;
-  struct ivec3_s coord;
-  uint64 key;
+struct GridTr_grid_cell_s {
+  struct ivec3_s lrc; // z := layer, y := row, x := column
+  uint64 hash;
+  uint32 num_colliders;
+  uint32 *colliders;
+  struct GridTr_aabb_s aabb;
+};
+
+struct GridTr_grid_s {
+  struct GridTr_hash_table_s *grid_table;
+  struct GridTr_array_s *colliders;
+  uint32 cell_size;
 };

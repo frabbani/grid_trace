@@ -1,6 +1,24 @@
 #include "vec.h"
 #include <math.h>
 
+uint64 ivec3_fnv1a(struct ivec3_s v) {
+  uint64 h = 1469598103934665603ull; // FNV offset
+  h ^= (uint64)v.x;
+  h *= 1099511628211ull;
+  h ^= (uint64)v.y;
+  h *= 1099511628211ull;
+  h ^= (uint64)v.z;
+  h *= 1099511628211ull;
+  return h;
+}
+
+struct vec2_s vec2_set(float x, float y) {
+  struct vec2_s v;
+  v.x = x;
+  v.y = y;
+  return v;
+}
+
 struct vec3_s vec3_zero() {
   const struct vec3_s v = {{{0.0f, 0.0f, 0.0f}}};
   return v;

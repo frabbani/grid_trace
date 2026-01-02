@@ -1,10 +1,4 @@
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-// include your hash table header
-#include "hash.h" // change to your actual header
+#include "hash.h"
 #include "testing.h"
 
 extern int g_tests_run;
@@ -15,11 +9,11 @@ extern int g_tests_failed;
 // -----------------------------
 static uint64 u64_hash(uint64 x) { return x; } // just identity for testing
 
-static int g_dtor_calls = 0;
+static int g_hash_dtor_calls = 0;
 static void counting_destructor(void *p) {
   // If you stored heap pointers, you could free(p) here too.
   (void)p;
-  g_dtor_calls++;
+  g_hash_dtor_calls++;
 }
 
 // -----------------------------
@@ -27,46 +21,46 @@ static void counting_destructor(void *p) {
 // -----------------------------
 
 static void test_create_destroy_empty(void) {
-  struct NS_hash_table_s *t = NS_create_hash_table(4);
+  struct GridTr_hash_table_s *t = GridTr_create_hash_table(4);
   ASSERT_TRUE(t != NULL);
   ASSERT_TRUE(t->entries != NULL);
   ASSERT_TRUE(t->size >= 256); // your create clamps to >=256
-  NS_destroy_hash_table(&t, NULL);
-  t = NS_create_hash_table(1024);
+  GridTr_destroy_hash_table(&t, NULL);
+  t = GridTr_create_hash_table(1024);
   ASSERT_TRUE(t != NULL);
   ASSERT_TRUE(t->entries != NULL);
   ASSERT_TRUE(t->size == 1024);
-  NS_destroy_hash_table(&t, NULL);
+  GridTr_destroy_hash_table(&t, NULL);
 }
 
 static void test_add_get_and_find(void) {
-  struct NS_hash_table_s *t = NS_create_hash_table(256);
+  struct GridTr_hash_table_s *t = GridTr_create_hash_table(256);
   ASSERT_TRUE(t != NULL);
 
   uint64 h = u64_hash(123);
 
   // Not present yet
-  ASSERT_FALSE(NS_hash_table_find(t, h));
+  ASSERT_FALSE(GridTr_hash_table_find(t, h));
 
   // store something - using the pointer as a container
   int value = 42;
-  int **ptr = (int **)NS_hash_table_add_or_get(t, h); // adds
+  int **ptr = (int **)GridTr_hash_table_add_or_get(t, h); // adds
   ASSERT_TRUE(ptr != NULL);
   ASSERT_TRUE(*ptr == NULL);
   *ptr = &value;
-  ASSERT_TRUE(NS_hash_table_find(t, h));
-  int **ptr2 = (int **)NS_hash_table_add_or_get(t, h); // does a get
+  ASSERT_TRUE(GridTr_hash_table_find(t, h));
+  int **ptr2 = (int **)GridTr_hash_table_add_or_get(t, h); // does a get
   ASSERT_TRUE(ptr2 == ptr);
   ASSERT_TRUE(*ptr2 == *ptr);
   ASSERT_TRUE(*ptr2 == &value);
 
-  NS_destroy_hash_table(&t, NULL);
+  GridTr_destroy_hash_table(&t, NULL);
 }
 
 static void test_collisions_in_same_bucket(void) {
   // Force collisions by keeping size at 256 and choosing hashes that share mod
   // 256
-  struct NS_hash_table_s *t = NS_create_hash_table(256);
+  struct GridTr_hash_table_s *t = GridTr_create_hash_table(256);
   ASSERT_TRUE(t != NULL);
 
   uint64 base = 7;
@@ -74,9 +68,9 @@ static void test_collisions_in_same_bucket(void) {
   uint64 h2 = base + 256; // same bucket if size is 256
   uint64 h3 = base + 512; // same bucket
 
-  void **s1 = NS_hash_table_add_or_get(t, h1);
-  void **s2 = NS_hash_table_add_or_get(t, h2);
-  void **s3 = NS_hash_table_add_or_get(t, h3);
+  void **s1 = GridTr_hash_table_add_or_get(t, h1);
+  void **s2 = GridTr_hash_table_add_or_get(t, h2);
+  void **s3 = GridTr_hash_table_add_or_get(t, h3);
 
   ASSERT_TRUE(s1 && s2 && s3);
   ASSERT_TRUE(s1 != s2 && s2 != s3 && s1 != s3);
@@ -86,68 +80,68 @@ static void test_collisions_in_same_bucket(void) {
   *s2 = &b;
   *s3 = &c;
 
-  ASSERT_TRUE(NS_hash_table_find(t, h1));
-  ASSERT_TRUE(NS_hash_table_find(t, h2));
-  ASSERT_TRUE(NS_hash_table_find(t, h3));
+  ASSERT_TRUE(GridTr_hash_table_find(t, h1));
+  ASSERT_TRUE(GridTr_hash_table_find(t, h2));
+  ASSERT_TRUE(GridTr_hash_table_find(t, h3));
 
   // Ensure retrieving each gets the correct stored pointer
-  ASSERT_TRUE(*NS_hash_table_add_or_get(t, h1) == &a);
-  ASSERT_TRUE(*NS_hash_table_add_or_get(t, h2) == &b);
-  ASSERT_TRUE(*NS_hash_table_add_or_get(t, h3) == &c);
+  ASSERT_TRUE(*GridTr_hash_table_add_or_get(t, h1) == &a);
+  ASSERT_TRUE(*GridTr_hash_table_add_or_get(t, h2) == &b);
+  ASSERT_TRUE(*GridTr_hash_table_add_or_get(t, h3) == &c);
 
-  NS_destroy_hash_table(&t, NULL);
+  GridTr_destroy_hash_table(&t, NULL);
 }
 
 static void test_free_removes_entry(void) {
-  struct NS_hash_table_s *t = NS_create_hash_table(256);
+  struct GridTr_hash_table_s *t = GridTr_create_hash_table(256);
   ASSERT_TRUE(t != NULL);
 
   uint64 h = u64_hash(123456);
 
-  void **slot = NS_hash_table_add_or_get(t, h);
+  void **slot = GridTr_hash_table_add_or_get(t, h);
   ASSERT_TRUE(slot != NULL);
 
   int v = 77;
   *slot = &v;
 
-  ASSERT_TRUE(NS_hash_table_find(t, h));
-  ASSERT_TRUE(NS_hash_table_free(t, h));
-  ASSERT_FALSE(NS_hash_table_find(t, h));
+  ASSERT_TRUE(GridTr_hash_table_find(t, h));
+  ASSERT_TRUE(GridTr_hash_table_free(t, h));
+  ASSERT_FALSE(GridTr_hash_table_find(t, h));
 
   // freeing again should fail
-  ASSERT_FALSE(NS_hash_table_free(t, h));
+  ASSERT_FALSE(GridTr_hash_table_free(t, h));
 
-  NS_destroy_hash_table(&t, NULL);
+  GridTr_destroy_hash_table(&t, NULL);
 }
 
 static void test_delete_then_reinsert(void) {
-  struct NS_hash_table_s *t = NS_create_hash_table(256);
+  struct GridTr_hash_table_s *t = GridTr_create_hash_table(256);
   ASSERT_TRUE(t != NULL);
 
   uint64 h = u64_hash(555);
 
-  void **s1 = NS_hash_table_add_or_get(t, h);
+  void **s1 = GridTr_hash_table_add_or_get(t, h);
   ASSERT_TRUE(s1 != NULL);
   int a = 10;
   *s1 = &a;
 
-  ASSERT_TRUE(NS_hash_table_free(t, h));
-  ASSERT_FALSE(NS_hash_table_find(t, h));
+  ASSERT_TRUE(GridTr_hash_table_free(t, h));
+  ASSERT_FALSE(GridTr_hash_table_find(t, h));
 
   // reinsert
-  void **s2 = NS_hash_table_add_or_get(t, h);
+  void **s2 = GridTr_hash_table_add_or_get(t, h);
   ASSERT_TRUE(s2 != NULL);
-  ASSERT_TRUE(NS_hash_table_find(t, h));
+  ASSERT_TRUE(GridTr_hash_table_find(t, h));
 
   // after reinsertion, data starts as NULL (your add initializes data=NULL)
   ASSERT_TRUE(*s2 == NULL);
 
-  NS_destroy_hash_table(&t, NULL);
+  GridTr_destroy_hash_table(&t, NULL);
 }
 /*
 
 static void test_rehash_preserves_entries(void) {
-  struct NS_hash_table_s *t = NS_create_hash_table(256);
+  struct GridTr_hash_table_s *t = GridTr_create_hash_table(256);
   ASSERT_TRUE(t != NULL);
 
   // Insert enough entries to almost certainly trigger rehash at some load
@@ -160,7 +154,7 @@ static void test_rehash_preserves_entries(void) {
   for (int i = 0; i < N; i++) {
     vals[i] = i * 3 + 1;
     uint64 h = (uint64)(0x9e3779b97f4a7c15ULL * (uint64)i); // spread
-    void **slot = NS_hash_table_add_or_get(t, h);
+    void **slot = GridTr_hash_table_add_or_get(t, h);
     ASSERT_TRUE(slot != NULL);
     *slot = &vals[i];
   }
@@ -168,26 +162,26 @@ static void test_rehash_preserves_entries(void) {
   // Verify all are still findable and mapped to correct pointers
   for (int i = 0; i < N; i++) {
     uint64 h = (uint64)(0x9e3779b97f4a7c15ULL * (uint64)i);
-    ASSERT_TRUE(NS_hash_table_find(t, h));
-    void **slot = NS_hash_table_add_or_get(t, h);
+    ASSERT_TRUE(GridTr_hash_table_find(t, h));
+    void **slot = GridTr_hash_table_add_or_get(t, h);
     ASSERT_TRUE(slot != NULL);
     ASSERT_TRUE(*slot == &vals[i]);
   }
 
   free(vals);
-  NS_destroy_hash_table(&t, NULL);
+  GridTr_destroy_hash_table(&t, NULL);
 }
 
 static void test_destroy_calls_destructor_for_live_entries_only(void) {
-  struct NS_hash_table_s *t = NS_create_hash_table(256);
+  struct GridTr_hash_table_s *t = GridTr_create_hash_table(256);
   ASSERT_TRUE(t != NULL);
 
-  g_dtor_calls = 0;
+  g_hash_dtor_calls = 0;
 
   // Add 3, delete 1, expect destructor called only for remaining 2
-  void **a = NS_hash_table_add_or_get(t, 1);
-  void **b = NS_hash_table_add_or_get(t, 2);
-  void **c = NS_hash_table_add_or_get(t, 3);
+  void **a = GridTr_hash_table_add_or_get(t, 1);
+  void **b = GridTr_hash_table_add_or_get(t, 2);
+  void **c = GridTr_hash_table_add_or_get(t, 3);
   ASSERT_TRUE(a && b && c);
 
   // store non-NULL so destructor has something to "process"
@@ -196,10 +190,10 @@ static void test_destroy_calls_destructor_for_live_entries_only(void) {
   *b = &vb;
   *c = &vc;
 
-  ASSERT_TRUE(NS_hash_table_free(t, 2)); // remove b
+  ASSERT_TRUE(GridTr_hash_table_free(t, 2)); // remove b
 
-  NS_destroy_hash_table(&t, counting_destructor);
-  ASSERT_EQ_I(g_dtor_calls, 2);
+  GridTr_destroy_hash_table(&t, counting_destructor);
+  ASSERT_EQ_I(g_hash_dtor_calls, 2);
 }
 */
 
