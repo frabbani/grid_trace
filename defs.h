@@ -68,7 +68,7 @@ typedef void (*GridTr_move_func)(void *, void *);
   do {                                                                         \
     if (n >= max) {                                                            \
       max = MAX(max * 2, 4);                                                   \
-      void *new_ptr = GridTr_new(max * sz);                                        \
+      void *new_ptr = GridTr_new(max * sz);                                    \
       if (data) {                                                              \
         memcpy(new_ptr, data, n * sz);                                         \
         free(data);                                                            \
@@ -77,7 +77,11 @@ typedef void (*GridTr_move_func)(void *, void *);
     }                                                                          \
   } while (0)
 
+
+extern void *allocmem(size_t size);
+extern void freemem(void *ptr);
+
 #define PTR_SZ (sizeof(void *))
-#define GridTr_new(size)  malloc(size) // potentially replace with custom allocator
-#define GridTr_free(ptr) do{ if(ptr) free(ptr); ptr = NULL; } while(0)
+#define GridTr_new(size)  allocmem(size) // potentially replace with custom allocator
+#define GridTr_free(ptr) do{ if(ptr){freemem(ptr); ptr = NULL; } } while(0)
 // clang-format on

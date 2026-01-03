@@ -5,94 +5,49 @@
 #include <stdlib.h>
 #include <string.h>
 
-struct dtor_s {
-  char type[32];
-  GridTr_destructor_func destructor;
-};
-
 struct g_s {
   void *data;
-  char type[32];
+  uint64 hash;
   uint num_elems, elem_size;
 };
 
-struct gc_s {
+struct GridTr_gc_s {
   struct GridTr_array_s *to_sweep;
-  struct dtor_s *dtors;
-  uint num_dtors, max_dtors;
-  bool sort_dtors;
+  struct GridTr_hash_table_s *dtors_table;
 };
 
-static int compare_dtor(const void *a, const void *b) {
-  const struct dtor_s *da = (const struct dtor_s *)a;
-  const struct dtor_s *db = (const struct dtor_s *)b;
-  return strcmp(da->type, db->type);
-}
-
-static struct gc_s *gc = NULL;
-
-void make_gc(void) {
-  if (!gc) {
-    gc = (struct gc_s *)GridTr_new(sizeof(struct gc_s));
-    if (!gc)
-      printf("well shit...\n");
-
-    gc->to_sweep = GridTr_create_array(sizeof(struct g_s), 1024, 1024);
-    gc->dtors = (struct dtor_s *)GridTr_new(256 * sizeof(struct dtor_s));
-    gc->num_dtors = 0;
-    gc->max_dtors = 256;
-    gc->sort_dtors = false;
-  }
+struct GridTr_gc_s *GridTr_create_garbage_collector() {
+  struct GridTr_gc_s *gc =
+      (struct GridTr_gc_s *)GridTr_new(sizeof(struct GridTr_gc_s));
+  if (!gc)
+    return NULL;
+  gc->to_sweep = GridTr_create_array(sizeof(struct g_s), 1024, 1024);
+  gc->dtors_table = GridTr_create_hash_table(
+      256, NULL); // destructor functions aren't destructed.
+  return gc;
+  a
 }
 
 void GridTr_add_garbage_collector_destructor(
-    const char *type, GridTr_destructor_func destructor) {
-  make_gc();
+    struct GridTr_gc_s *gc, const char *type,
+    GridTr_destructor_func destructor) {
   if (!gc || !type || !destructor)
     return;
-  if (gc->num_dtors >= gc->max_dtors) {
-    printf("%s - welp... no more destructors\n", __FUNCTION__);
-    // optionally, could realloc to grow
-    return;
-  }
-  for (uint i = 0; i < gc->num_dtors; i++) {
-    if (strcmp(gc->dtors[i].type, type) == 0) {
-      // already exists, replace
-      gc->dtors[i].destructor = destructor;
-      return;
-    }
-  }
-  strncpy(gc->dtors[gc->num_dtors].type, type, 31);
-  gc->dtors[gc->num_dtors].type[31] = '\0';
-  gc->dtors[gc->num_dtors].destructor = destructor;
-  gc->num_dtors++;
-  gc->sort_dtors = true; // need to sort destructors
+  uint64 hash = GridTr_hash_str_fnv1a(type);
+  void **slot = GridTr_hash_table_add_or_get(gc->dtors_table, hash);
+  *slot = destructor;
 }
 
-static GridTr_destructor_func find_dtor(const char *type) {
-  if (!gc || !type || !gc->dtors || gc->num_dtors == 0)
+GridTr_destructor_func
+GridTr_get_garbage_collector_destructor(struct GridTr_gc_s *gc, uint64 hash) {
+  if (!gc)
     return NULL;
-  struct dtor_s key;
-  strncpy(key.type, type, 31);
-  key.type[31] = '\0';
-  int l = 0;
-  int r = gc->num_dtors - 1;
-  int m = (l + r) / 2;
-  while (l <= r) {
-    m = (l + r) / 2;
-    int cmp = strcmp(key.type, gc->dtors[m].type);
-    if (cmp == 0)
-      return gc->dtors[m].destructor;
-    if (cmp < 0)
-      r = m - 1;
-    else
-      l = m + 1;
-  }
-  return NULL;
+  void **slot = GridTr_hash_table_maybe_get(gc->dtors_table, hash);
+  return slot ? (GridTr_destructor_func)(*slot) : NULL;
 }
 
-void *GridTr_allocate_for_garbage_collection(const char *type, size_t size) {
-  make_gc();
+void *GridTr_allocate_for_garbage_collection(struct GridTr_gc_s *gc,
+                                             const char *type, size_t size) {
   if (!gc || !type || size == 0)
     return NULL;
 
@@ -102,8 +57,7 @@ void *GridTr_allocate_for_garbage_collection(const char *type, size_t size) {
 
   struct g_s g;
   g.data = ptr;
-  strncpy(g.type, type, 31);
-  g.type[31] = '\0';
+  g.hash = GridTr_hash_str_fnv1a(type);
   g.num_elems = 1;
   g.elem_size = size;
 
@@ -111,10 +65,10 @@ void *GridTr_allocate_for_garbage_collection(const char *type, size_t size) {
   return ptr;
 }
 
-void *GridTr_allocate_multiple_for_garbage_collection(const char *type,
+void *GridTr_allocate_multiple_for_garbage_collection(struct GridTr_gc_s *gc,
+                                                      const char *type,
                                                       size_t size,
                                                       size_t count) {
-  make_gc();
   if (!gc || !type || size == 0 || count == 0)
     return NULL;
 
@@ -124,27 +78,24 @@ void *GridTr_allocate_multiple_for_garbage_collection(const char *type,
 
   struct g_s g;
   g.data = ptr;
-  strncpy(g.type, type, 31);
-  g.type[31] = '\0';
+  g.hash = GridTr_hash_str_fnv1a(type);
   g.num_elems = count;
   g.elem_size = size;
   GridTr_array_add(gc->to_sweep, &g);
   return ptr;
 }
 
-void GridTr_collect_garbage() {
+void GridTr_collect_garbage(struct GridTr_gc_s *gc) {
   if (!gc)
     return;
-  if (gc->dtors && gc->num_dtors > 0 && gc->sort_dtors)
-    qsort(gc->dtors, gc->num_dtors, sizeof(struct dtor_s), compare_dtor);
-  gc->sort_dtors = false;
 
   // Collect garbage from the array
   while (gc->to_sweep->num_elems) {
     uint i = gc->to_sweep->num_elems - 1;
     struct g_s *g = (struct g_s *)GridTr_array_get(gc->to_sweep, i);
     if (g && g->data) {
-      GridTr_destructor_func dtor = find_dtor(g->type);
+      GridTr_destructor_func dtor =
+          GridTr_get_garbage_collector_destructor(gc, g->hash);
       if (dtor) {
         for (uint j = 0; j < g->num_elems; j++) {
           void *ptr = (char *)g->data + j * g->elem_size;
@@ -159,8 +110,19 @@ void GridTr_collect_garbage() {
                            i); // no swap because we are freeing last every time
   }
 
-  GridTr_destroy_array(&gc->to_sweep);
-  GridTr_free(gc->dtors);
-  GridTr_free(gc);
-  gc = NULL;
+  // GridTr_destroy_array(&gc->to_sweep);
+  // GridTr_destroy_ha
+  // GridTr_free(gc);
+  // gc = NULL;
+}
+
+void GridTr_destroy_garbage_collector(struct GridTr_gc_s **gc) {
+  if (!gc || !*gc)
+    return;
+
+  GridTr_collect_garbage(*gc);
+  GridTr_destroy_array(&(*gc)->to_sweep);
+  GridTr_destroy_hash_table(&(*gc)->dtors_table);
+  GridTr_free(*gc);
+  *gc = NULL;
 }

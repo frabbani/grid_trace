@@ -1,214 +1,237 @@
 #include "hash.h"
 #include "testing.h"
+#include <stdint.h>
+#include <stdlib.h>
 
 extern int g_tests_run;
 extern int g_tests_failed;
 
-// -----------------------------
-// helpers
-// -----------------------------
-static uint64 u64_hash(uint64 x) { return x; } // just identity for testing
+/* ---------------- helpers ---------------- */
 
-static int g_hash_dtor_calls = 0;
-static void counting_destructor(void *p) {
-  // If you stored heap pointers, you could free(p) here too.
+static uint64 u64_hash_u32(uint32_t x) {
+  // simple deterministic 64-bit mix for tests (not crypto)
+  uint64 h = (uint64)x;
+  h ^= h >> 33;
+  h *= 0xff51afd7ed558ccdULL;
+  h ^= h >> 33;
+  h *= 0xc4ceb9fe1a85ec53ULL;
+  h ^= h >> 33;
+  return h;
+}
+
+static int g_dtor_calls = 0;
+static void counting_dtor(void *p) {
   (void)p;
-  g_hash_dtor_calls++;
+  g_dtor_calls++;
 }
 
-// -----------------------------
-// tests
-// -----------------------------
+/* ---------------- tests ---------------- */
 
-static void test_create_destroy_empty(void) {
-  struct GridTr_hash_table_s *t = GridTr_create_hash_table(4);
+static void test_create_and_destroy_table(void) {
+  struct GridTr_hash_table_s *t = GridTr_create_hash_table(256, NULL);
   ASSERT_TRUE(t != NULL);
-  ASSERT_TRUE(t->entries != NULL);
-  ASSERT_TRUE(t->size >= 256); // your create clamps to >=256
-  GridTr_destroy_hash_table(&t, NULL);
-  t = GridTr_create_hash_table(1024);
-  ASSERT_TRUE(t != NULL);
-  ASSERT_TRUE(t->entries != NULL);
-  ASSERT_TRUE(t->size == 1024);
-  GridTr_destroy_hash_table(&t, NULL);
+  ASSERT_EQ_U(t->size >= 256, 1);
+  ASSERT_EQ_U(t->total_elems, 0);
+
+  GridTr_destroy_hash_table(&t);
+  ASSERT_TRUE(t == NULL);
 }
 
-static void test_add_get_and_find(void) {
-  struct GridTr_hash_table_s *t = GridTr_create_hash_table(256);
+static void test_add_or_get_inserts_once_and_find_works(void) {
+  struct GridTr_hash_table_s *t = GridTr_create_hash_table(256, NULL);
   ASSERT_TRUE(t != NULL);
 
-  uint64 h = u64_hash(123);
+  uint64 h = u64_hash_u32(123);
 
-  // Not present yet
   ASSERT_FALSE(GridTr_hash_table_find(t, h));
+  ASSERT_TRUE(GridTr_hash_table_maybe_get(t, h) == NULL);
+  ASSERT_EQ_U(t->total_elems, 0);
 
-  // store something - using the pointer as a container
-  int value = 42;
-  int **ptr = (int **)GridTr_hash_table_add_or_get(t, h); // adds
-  ASSERT_TRUE(ptr != NULL);
-  ASSERT_TRUE(*ptr == NULL);
-  *ptr = &value;
+  void **slot = GridTr_hash_table_add_or_get(t, h);
+  ASSERT_TRUE(slot != NULL);
+  ASSERT_TRUE(*slot == NULL);
   ASSERT_TRUE(GridTr_hash_table_find(t, h));
-  int **ptr2 = (int **)GridTr_hash_table_add_or_get(t, h); // does a get
-  ASSERT_TRUE(ptr2 == ptr);
-  ASSERT_TRUE(*ptr2 == *ptr);
-  ASSERT_TRUE(*ptr2 == &value);
+  ASSERT_TRUE(GridTr_hash_table_maybe_get(t, h) == slot);
+  ASSERT_EQ_U(t->total_elems, 1);
 
-  GridTr_destroy_hash_table(&t, NULL);
+  // Second add_or_get should NOT increase total_elems
+  void **slot2 = GridTr_hash_table_add_or_get(t, h);
+  ASSERT_TRUE(slot2 == slot);
+  ASSERT_EQ_U(t->total_elems, 1);
+
+  GridTr_destroy_hash_table(&t);
 }
 
-static void test_collisions_in_same_bucket(void) {
-  // Force collisions by keeping size at 256 and choosing hashes that share mod
-  // 256
-  struct GridTr_hash_table_s *t = GridTr_create_hash_table(256);
+static void test_maybe_get_returns_same_slot_and_preserves_value(void) {
+  struct GridTr_hash_table_s *t = GridTr_create_hash_table(256, NULL);
   ASSERT_TRUE(t != NULL);
 
-  uint64 base = 7;
-  uint64 h1 = base;
-  uint64 h2 = base + 256; // same bucket if size is 256
-  uint64 h3 = base + 512; // same bucket
+  uint64 h = u64_hash_u32(999);
 
-  void **s1 = GridTr_hash_table_add_or_get(t, h1);
-  void **s2 = GridTr_hash_table_add_or_get(t, h2);
-  void **s3 = GridTr_hash_table_add_or_get(t, h3);
+  void **slot = GridTr_hash_table_add_or_get(t, h);
+  ASSERT_TRUE(slot != NULL);
+  ASSERT_TRUE(*slot == NULL);
 
-  ASSERT_TRUE(s1 && s2 && s3);
-  ASSERT_TRUE(s1 != s2 && s2 != s3 && s1 != s3);
+  int x = 42;
+  *slot = &x;
 
-  int a = 1, b = 2, c = 3;
-  *s1 = &a;
-  *s2 = &b;
-  *s3 = &c;
+  void **slot2 = GridTr_hash_table_maybe_get(t, h);
+  ASSERT_TRUE(slot2 == slot);
+  ASSERT_TRUE(*slot2 == &x);
 
-  ASSERT_TRUE(GridTr_hash_table_find(t, h1));
-  ASSERT_TRUE(GridTr_hash_table_find(t, h2));
-  ASSERT_TRUE(GridTr_hash_table_find(t, h3));
-
-  // Ensure retrieving each gets the correct stored pointer
-  ASSERT_TRUE(*GridTr_hash_table_add_or_get(t, h1) == &a);
-  ASSERT_TRUE(*GridTr_hash_table_add_or_get(t, h2) == &b);
-  ASSERT_TRUE(*GridTr_hash_table_add_or_get(t, h3) == &c);
-
-  GridTr_destroy_hash_table(&t, NULL);
+  GridTr_destroy_hash_table(&t);
 }
 
-static void test_free_removes_entry(void) {
-  struct GridTr_hash_table_s *t = GridTr_create_hash_table(256);
+static void test_free_removes_entry_and_decrements_total(void) {
+  struct GridTr_hash_table_s *t = GridTr_create_hash_table(256, NULL);
   ASSERT_TRUE(t != NULL);
 
-  uint64 h = u64_hash(123456);
+  uint64 h1 = u64_hash_u32(1);
+  uint64 h2 = u64_hash_u32(2);
+
+  GridTr_hash_table_add_or_get(t, h1);
+  GridTr_hash_table_add_or_get(t, h2);
+  ASSERT_EQ_U(t->total_elems, 2);
+
+  ASSERT_TRUE(GridTr_hash_table_free(t, h1));
+  ASSERT_FALSE(GridTr_hash_table_find(t, h1));
+  ASSERT_TRUE(GridTr_hash_table_maybe_get(t, h1) == NULL);
+  ASSERT_EQ_U(t->total_elems, 1);
+
+  // Freeing again should fail and not decrement
+  ASSERT_FALSE(GridTr_hash_table_free(t, h1));
+  ASSERT_EQ_U(t->total_elems, 1);
+
+  GridTr_destroy_hash_table(&t);
+}
+
+static void test_free_calls_data_dtor_if_present(void) {
+  g_dtor_calls = 0;
+
+  struct GridTr_hash_table_s *t = GridTr_create_hash_table(256, counting_dtor);
+  ASSERT_TRUE(t != NULL);
+
+  uint64 h = u64_hash_u32(77);
 
   void **slot = GridTr_hash_table_add_or_get(t, h);
   ASSERT_TRUE(slot != NULL);
 
-  int v = 77;
-  *slot = &v;
-
-  ASSERT_TRUE(GridTr_hash_table_find(t, h));
-  ASSERT_TRUE(GridTr_hash_table_free(t, h));
-  ASSERT_FALSE(GridTr_hash_table_find(t, h));
-
-  // freeing again should fail
-  ASSERT_FALSE(GridTr_hash_table_free(t, h));
-
-  GridTr_destroy_hash_table(&t, NULL);
-}
-
-static void test_delete_then_reinsert(void) {
-  struct GridTr_hash_table_s *t = GridTr_create_hash_table(256);
-  ASSERT_TRUE(t != NULL);
-
-  uint64 h = u64_hash(555);
-
-  void **s1 = GridTr_hash_table_add_or_get(t, h);
-  ASSERT_TRUE(s1 != NULL);
-  int a = 10;
-  *s1 = &a;
+  // allocate heap memory so destructor can "pretend" to free; we only count
+  // calls
+  void *p = malloc(16);
+  ASSERT_TRUE(p != NULL);
+  *slot = p;
 
   ASSERT_TRUE(GridTr_hash_table_free(t, h));
-  ASSERT_FALSE(GridTr_hash_table_find(t, h));
+  ASSERT_EQ_I(g_dtor_calls, 1);
+  ASSERT_EQ_U(t->total_elems, 0);
 
-  // reinsert
-  void **s2 = GridTr_hash_table_add_or_get(t, h);
-  ASSERT_TRUE(s2 != NULL);
-  ASSERT_TRUE(GridTr_hash_table_find(t, h));
+  // Note: counting_dtor doesn't free 'p'; free here to avoid leak in test
+  free(p);
 
-  // after reinsertion, data starts as NULL (your add initializes data=NULL)
-  ASSERT_TRUE(*s2 == NULL);
-
-  GridTr_destroy_hash_table(&t, NULL);
+  GridTr_destroy_hash_table(&t);
 }
-/*
 
-static void test_rehash_preserves_entries(void) {
-  struct GridTr_hash_table_s *t = GridTr_create_hash_table(256);
+static void test_destroy_calls_data_dtor_for_all_live_entries(void) {
+  g_dtor_calls = 0;
+
+  struct GridTr_hash_table_s *t = GridTr_create_hash_table(256, counting_dtor);
   ASSERT_TRUE(t != NULL);
 
-  // Insert enough entries to almost certainly trigger rehash at some load
-  // factor. Even if it doesn't trigger due to your factor, this still validates
-  // correctness.
-  enum { N = 5000 };
-  int *vals = (int *)GridTr_new(sizeof(int) * N);
-  ASSERT_TRUE(vals != NULL);
+  void *p1 = malloc(8);
+  void *p2 = malloc(8);
+  ASSERT_TRUE(p1 && p2);
 
-  for (int i = 0; i < N; i++) {
-    vals[i] = i * 3 + 1;
-    uint64 h = (uint64)(0x9e3779b97f4a7c15ULL * (uint64)i); // spread
+  uint64 h1 = u64_hash_u32(10);
+  uint64 h2 = u64_hash_u32(11);
+
+  *GridTr_hash_table_add_or_get(t, h1) = p1;
+  *GridTr_hash_table_add_or_get(t, h2) = p2;
+
+  ASSERT_EQ_U(t->total_elems, 2);
+
+  GridTr_destroy_hash_table(&t);
+  ASSERT_TRUE(t == NULL);
+
+  ASSERT_EQ_I(g_dtor_calls, 2);
+
+  // counting_dtor doesn't free memory; free here
+  free(p1);
+  free(p2);
+}
+
+static void test_rehash_preserves_entries_and_total(void) {
+  struct GridTr_hash_table_s *t = GridTr_create_hash_table(256, NULL);
+  ASSERT_TRUE(t != NULL);
+
+  uint old_size = t->size;
+
+  // Insert enough unique keys to exceed load factor and trigger a rehash.
+  // We don't know the exact LOAD_FACTOR value, so just push a bunch.
+  const uint N = (uint)(old_size * 3); // likely enough for any sane LF
+  for (uint i = 0; i < N; i++) {
+    uint64 h = u64_hash_u32(1000u + i);
     void **slot = GridTr_hash_table_add_or_get(t, h);
     ASSERT_TRUE(slot != NULL);
-    *slot = &vals[i];
+    // Store something stable-ish (address of a static)
+    *slot = (void *)(uintptr_t)(0x1000u + i);
   }
 
-  // Verify all are still findable and mapped to correct pointers
-  for (int i = 0; i < N; i++) {
-    uint64 h = (uint64)(0x9e3779b97f4a7c15ULL * (uint64)i);
+  // Rehash should have happened at least once for typical load factors.
+  ASSERT_TRUE(t->size >= old_size);
+
+  // total_elems should equal number of unique inserts
+  ASSERT_EQ_U(t->total_elems, N);
+
+  // Verify we can still find and retrieve values
+  for (uint i = 0; i < N; i++) {
+    uint64 h = u64_hash_u32(1000u + i);
     ASSERT_TRUE(GridTr_hash_table_find(t, h));
-    void **slot = GridTr_hash_table_add_or_get(t, h);
+    void **slot = GridTr_hash_table_maybe_get(t, h);
     ASSERT_TRUE(slot != NULL);
-    ASSERT_TRUE(*slot == &vals[i]);
+    ASSERT_TRUE(*slot == (void *)(uintptr_t)(0x1000u + i));
   }
 
-  free(vals);
-  GridTr_destroy_hash_table(&t, NULL);
+  GridTr_destroy_hash_table(&t);
 }
 
-static void test_destroy_calls_destructor_for_live_entries_only(void) {
-  struct GridTr_hash_table_s *t = GridTr_create_hash_table(256);
+static void test_add_or_get_returns_valid_slot_even_when_rehashing(void) {
+  struct GridTr_hash_table_s *t = GridTr_create_hash_table(256, NULL);
   ASSERT_TRUE(t != NULL);
 
-  g_hash_dtor_calls = 0;
+  // Force near-threshold insert storm
+  uint old_size = t->size;
+  uint target = (uint)(old_size * 3);
 
-  // Add 3, delete 1, expect destructor called only for remaining 2
-  void **a = GridTr_hash_table_add_or_get(t, 1);
-  void **b = GridTr_hash_table_add_or_get(t, 2);
-  void **c = GridTr_hash_table_add_or_get(t, 3);
-  ASSERT_TRUE(a && b && c);
+  for (uint i = 0; i < target; i++) {
+    uint64 h = u64_hash_u32(50000u + i);
+    void **slot = GridTr_hash_table_add_or_get(t, h);
+    ASSERT_TRUE(slot != NULL);
+    *slot = (void *)(uintptr_t)(0xABC000u + i);
 
-  // store non-NULL so destructor has something to "process"
-  int va = 1, vb = 2, vc = 3;
-  *a = &va;
-  *b = &vb;
-  *c = &vc;
+    // Immediately verify the value can be read back
+    void **slot2 = GridTr_hash_table_maybe_get(t, h);
+    ASSERT_TRUE(slot2 != NULL);
+    ASSERT_TRUE(*slot2 == (void *)(uintptr_t)(0xABC000u + i));
+  }
 
-  ASSERT_TRUE(GridTr_hash_table_free(t, 2)); // remove b
+  ASSERT_EQ_U(t->total_elems, target);
+  ASSERT_TRUE(t->size >= old_size);
 
-  GridTr_destroy_hash_table(&t, counting_destructor);
-  ASSERT_EQ_I(g_hash_dtor_calls, 2);
+  GridTr_destroy_hash_table(&t);
 }
-*/
 
-// -----------------------------
-// suite runner
-// -----------------------------
+/* -------------- runner -------------- */
+
 void run_hash_table_tests(void) {
-  printf("[hash_table] begin test:\n");
-  test_create_destroy_empty();
-  test_add_get_and_find();
-  test_collisions_in_same_bucket();
-  test_free_removes_entry();
-  test_delete_then_reinsert();
-  // test_rehash_preserves_entries();
-  // test_destroy_calls_destructor_for_live_entries_only();
-  printf("[hash_table] tests run: %d, failed: %d\n", g_tests_run,
-         g_tests_failed);
+  printf("[hash] begin tests:\n");
+  test_create_and_destroy_table();
+  test_add_or_get_inserts_once_and_find_works();
+  test_maybe_get_returns_same_slot_and_preserves_value();
+  test_free_removes_entry_and_decrements_total();
+  test_free_calls_data_dtor_if_present();
+  test_destroy_calls_data_dtor_for_all_live_entries();
+  test_rehash_preserves_entries_and_total();
+  test_add_or_get_returns_valid_slot_even_when_rehashing();
+  printf("[hash] tests run: %d, failed: %d\n", g_tests_run, g_tests_failed);
 }

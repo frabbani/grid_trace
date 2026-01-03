@@ -4,14 +4,25 @@
 #include <stdlib.h>
 #include <string.h>
 
-struct GridTr_hash_table_s *GridTr_create_hash_table(uint initial_size) {
+uint64 GridTr_hash_str_fnv1a(const char *s) {
+  uint64 h = 1469598103934665603ULL; // FNV offset basis
+  while (*s) {
+    h ^= (uint8)(*s++);
+    h *= 1099511628211ULL; // FNV prime
+  }
+  return h;
+}
+
+struct GridTr_hash_table_s *
+GridTr_create_hash_table(uint initial_size, GridTr_destructor_func data_dtor) {
   struct GridTr_hash_table_s *table =
       GridTr_new(sizeof(struct GridTr_hash_table_s));
   if (!table)
     return NULL;
+  table->data_dtor = data_dtor;
 
   table->size = MAX(initial_size, 256);
-  table->max_num_elems = 0;
+  table->total_elems = 0;
   table->entries = GridTr_new(PTR_SZ * table->size);
   for (uint i = 0; i < table->size; i++) {
     table->entries[i] =
@@ -20,19 +31,18 @@ struct GridTr_hash_table_s *GridTr_create_hash_table(uint initial_size) {
   return table;
 }
 
-void GridTr_destroy_hash_table(struct GridTr_hash_table_s **table,
-                               GridTr_destructor_func destructor) {
+void GridTr_destroy_hash_table(struct GridTr_hash_table_s **table) {
   if (!table || !*table)
     return;
 
   struct GridTr_hash_table_s *ptr = *table;
-  if (destructor) {
+  if (ptr->data_dtor) {
     for (uint i = 0; i < ptr->size; i++) {
       struct GridTr_array_s *arr = ptr->entries[i];
       for (uint i = 0; i < arr->num_elems; i++) {
         struct GridTr_hash_table_entry_s *e = GridTr_array_get(arr, i);
         if (e)
-          destructor(e->data);
+          ptr->data_dtor(e->data);
       }
     }
   }
@@ -60,12 +70,14 @@ void GridTr_rehash_hash_table(struct GridTr_hash_table_s *table) {
         GridTr_create_array(sizeof(struct GridTr_hash_table_entry_s), 8, 8);
   }
 
+  table->total_elems = 0;
   for (uint i = 0; i < old_size; i++) {
     struct GridTr_array_s *array = table->entries[i];
     uint n = array->num_elems;
     for (uint j = 0; j < n; j++) {
       struct GridTr_hash_table_entry_s *e = GridTr_array_get(array, j);
       if (e) {
+        table->total_elems++;
         struct GridTr_hash_table_entry_s copy = *e;
         uint new_bucket = e->hash % new_size;
         GridTr_array_add(new_entries[new_bucket], &copy);
@@ -97,23 +109,26 @@ void **GridTr_hash_table_add_or_get(struct GridTr_hash_table_s *table,
   //   printf("collision on bucket %u!\n", bucket);
   // }
   // Not found, create a new entry
+  table->total_elems++;
   struct GridTr_hash_table_entry_s e;
   e.hash = hash;
   e.data = NULL;
   GridTr_array_add(arr, &e);
   n = arr->num_elems - 1;
   struct GridTr_hash_table_entry_s *new_entry = GridTr_array_get(arr, n);
-  table->max_num_elems = MAX(table->max_num_elems, arr->num_elems);
-  if ((float)table->max_num_elems / (float)table->size >
+  if ((float)table->total_elems / (float)table->size >
       GridTr_HASH_TABLE_LOAD_FACTOR) {
     GridTr_rehash_hash_table(table);
-    table->max_num_elems = 0;
-    for (uint i = 0; i < table->size; i++) {
-      struct GridTr_array_s *arr = table->entries[i];
-      table->max_num_elems = MAX(table->max_num_elems, arr->num_elems);
-      // dont bother recheacking. If another rehash is needed, it will happen
-      // on next add
+    // relook up
+    uint bucket = hash % table->size;
+    struct GridTr_array_s *arr = table->entries[bucket];
+    uint n = arr->num_elems;
+    for (uint i = 0; i < n; i++) {
+      struct GridTr_hash_table_entry_s *e = GridTr_array_get(arr, i);
+      if (e && e->hash == hash)
+        return &e->data;
     }
+    return NULL;
   }
   return &new_entry->data;
 }
@@ -128,12 +143,28 @@ bool GridTr_hash_table_find(const struct GridTr_hash_table_s *table,
   struct GridTr_array_s *arr = table->entries[bucket];
   uint n = arr->num_elems;
   for (uint i = 0; i < n; i++) {
-    struct GridTr_hash_table_entry_s *e =
-        GridTr_array_get(arr, i); // this also checks used
+    struct GridTr_hash_table_entry_s *e = GridTr_array_get(arr, i);
     if (e && e->hash == hash)
       return true;
   }
   return false;
+}
+
+void **GridTr_hash_table_maybe_get(struct GridTr_hash_table_s *table,
+                                   uint64 hash) {
+  if (!table)
+    return NULL;
+
+  uint bucket = hash % table->size;
+
+  struct GridTr_array_s *arr = table->entries[bucket];
+  uint n = arr->num_elems;
+  for (uint i = 0; i < n; i++) {
+    struct GridTr_hash_table_entry_s *e = GridTr_array_get(arr, i);
+    if (e && e->hash == hash)
+      return &e->data;
+  }
+  return NULL;
 }
 
 bool GridTr_hash_table_free(struct GridTr_hash_table_s *table, uint64 hash) {
@@ -147,6 +178,10 @@ bool GridTr_hash_table_free(struct GridTr_hash_table_s *table, uint64 hash) {
     struct GridTr_hash_table_entry_s *e =
         GridTr_array_get(arr, i); // this also checks used
     if (e && e->hash == hash) {
+      table->total_elems--;
+      if (table->data_dtor && e->data) {
+        table->data_dtor(e->data);
+      }
       GridTr_array_swap_free(arr, i);
       return true;
     }

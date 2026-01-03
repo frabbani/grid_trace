@@ -58,6 +58,10 @@ void GridTr_set_sat(struct GridTr_sat_s *sat, struct vec3_s d) {
   sat->min_maxs[0] = sat->min_maxs[0] = vec2_set(0.0f, 0.0f);
 }
 
+void GridTr_collider_dtor(void *ptr) {
+  GridTr_destroy_collider((struct GridTr_collider_s *)ptr);
+}
+
 void GridTr_create_collider(struct GridTr_collider_s *collider, uint id,
                             const struct vec3_s *ps, uint nps,
                             struct GridTr_plane_s plane) {
