@@ -9,6 +9,9 @@ struct GridTr_sat_s {
 
 bool GridTr_sat_olap(const struct GridTr_sat_s *sat);
 
+void GridTr_sat_setps(struct GridTr_sat_s *sat, const struct vec3_s *ps,
+                      uint num_ps, bool first);
+
 void GridTr_sat_setr(struct GridTr_sat_s *sat, struct vec3_s c, float radius,
                      bool first);
 
@@ -37,3 +40,5 @@ void GridTr_destroy_collider(struct GridTr_collider_s *collider);
 
 bool GridTr_collider_touches_aabb(const struct GridTr_collider_s *collider,
                                   const struct GridTr_aabb_s *aabb);
+
+void GridTr_collider_dtor(void *ptr);

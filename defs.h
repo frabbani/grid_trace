@@ -14,7 +14,7 @@ typedef uint64_t uint64;
 
 // uint = native unsigned counter, not fixed-width
 typedef unsigned int uint;
-typedef void (*GridTr_destructor_func)(void *);
+typedef void (*GridTr_dtor_func)(void *);
 typedef void (*GridTr_move_func)(void *, void *);
 
 #ifndef MIN
@@ -71,7 +71,20 @@ typedef void (*GridTr_move_func)(void *, void *);
       void *new_ptr = GridTr_new(max * sz);                                    \
       if (data) {                                                              \
         memcpy(new_ptr, data, n * sz);                                         \
-        free(data);                                                            \
+        GridTr_free(data);                                                            \
+      }                                                                        \
+      data = new_ptr;                                                          \
+    }                                                                          \
+  } while (0)
+
+#define MAYBE_RESIZE_FIX(data, n, max, sz, gr)                                         \
+  do {                                                                         \
+    if (n >= max) {                                                            \
+      max = MAX(max + gr, 4);                                                  \
+      void *new_ptr = GridTr_new(max * sz);                                    \
+      if (data) {                                                              \
+        memcpy(new_ptr, data, n * sz);                                         \
+        GridTr_free(data);                                                            \
       }                                                                        \
       data = new_ptr;                                                          \
     }                                                                          \
@@ -84,4 +97,6 @@ extern void freemem(void *ptr);
 #define PTR_SZ (sizeof(void *))
 #define GridTr_new(size)  allocmem(size) // potentially replace with custom allocator
 #define GridTr_free(ptr) do{ if(ptr){freemem(ptr); ptr = NULL; } } while(0)
+
+#define GridTr_oftype(t) #t
 // clang-format on

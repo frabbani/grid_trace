@@ -117,15 +117,15 @@ bool GridTr_rayseg_isect_plane(const struct GridTr_rayseg_s *seg,
   return t_ >= 0.0f && t_ <= seg->len;
 }
 
-void GridTr_find_exts(const struct vec3_s *ps, uint nps, struct vec3_s *min,
+void GridTr_find_exts(const struct vec3_s *ps, uint num_ps, struct vec3_s *min,
                       struct vec3_s *max) {
-  if (nps == 0) {
+  if (num_ps == 0) {
     *min = *max = vec3_zero();
     return;
   }
 
   *min = *max = ps[0];
-  for (uint i = 1; i < nps; i++) {
+  for (uint i = 1; i < num_ps; i++) {
     min->x = fminf(min->x, ps[i].x);
     min->y = fminf(min->y, ps[i].y);
     min->z = fminf(min->z, ps[i].z);
@@ -142,6 +142,21 @@ void GridTr_aabb_init(struct GridTr_aabb_s *aabb, struct vec3_s min,
   aabb->halfsize = vec3_mul(vec3_sub(max, min), 0.5f);
   aabb->o = vec3_add(min, aabb->halfsize);
   aabb->radius = vec3_len(aabb->halfsize);
+}
+
+void GridTr_aabb_from_ps(struct GridTr_aabb_s *aabb, const struct vec3_s *ps,
+                         uint num_ps) {
+  if (!aabb || !ps || num_ps == 0) {
+    return;
+  }
+
+  struct vec3_s min = ps[0];
+  struct vec3_s max = ps[0];
+  for (uint i = 1; i < num_ps; i++) {
+    min = vec3_min(min, ps[i]);
+    max = vec3_max(max, ps[i]);
+  }
+  GridTr_aabb_init(aabb, min, max);
 }
 
 bool GridTr_aabb_clip_ray(const struct GridTr_aabb_s *aabb,

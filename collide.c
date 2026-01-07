@@ -11,7 +11,7 @@ bool GridTr_sat_olap(const struct GridTr_sat_s *sat) {
   SORT2(b0, b1);
 
   // overlap (touching counts)
-  return !(a1 < b0 || b1 < a0);
+  return !(a1 < (b0 - TOL) || b1 < (a0 - TOL));
 }
 
 void GridTr_sat_setps(struct GridTr_sat_s *sat, const struct vec3_s *ps,
@@ -110,14 +110,13 @@ bool GridTr_collider_touches_aabb(const struct GridTr_collider_s *collider,
       {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}};
 
   struct GridTr_sat_s sat;
-  // clang-format off
-#define TEST_SAT \
-do { \
-  GridTr_sat_setas(&sat, aabb->o, axes, aabb->halfsize, true); \
-  GridTr_sat_setps(&sat, collider->ps, collider->edge_count, false); \
-  if (!GridTr_sat_olap(&sat)) return false; \
-} while (0)
-  // clang-format on
+#define TEST_SAT                                                               \
+  do {                                                                         \
+    GridTr_sat_setas(&sat, aabb->o, axes, aabb->halfsize, true);               \
+    GridTr_sat_setps(&sat, collider->ps, collider->edge_count, false);         \
+    if (!GridTr_sat_olap(&sat))                                                \
+      return false;                                                            \
+  } while (0)
 
   for (int i = 0; i < 3; i++) {
     sat.d = axes[i];
@@ -127,10 +126,10 @@ do { \
   sat.d = collider->plane.n;
   TEST_SAT;
 
-  for (int j = 0; j < collider->edge_count; j++) {
-    sat.d = collider->edge_planes[j].n;
-    TEST_SAT;
-  }
+  // for (int j = 0; j < collider->edge_count; j++) {
+  //   sat.d = collider->edge_planes[j].n;
+  //   TEST_SAT;
+  // }
 
   for (int i = 0; i < 3; i++) {
     for (int j = 0; j < collider->edge_count; j++) {

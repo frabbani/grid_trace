@@ -69,6 +69,9 @@ void GridTr_find_exts(const struct vec3_s *ps, uint nps, struct vec3_s *min,
 void GridTr_aabb_init(struct GridTr_aabb_s *aabb, struct vec3_s min,
                       struct vec3_s max);
 
+void GridTr_aabb_from_ps(struct GridTr_aabb_s *aabb, const struct vec3_s *ps,
+                         uint num_ps);
+
 bool GridTr_aabb_clip_ray(const struct GridTr_aabb_s *aabb,
                           const struct GridTr_ray_s *ray, float *ts);
 

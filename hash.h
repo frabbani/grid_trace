@@ -18,11 +18,11 @@ struct GridTr_hash_table_s {
   struct GridTr_array_s **entries;
   uint size;
   uint total_elems;
-  GridTr_destructor_func data_dtor;
+  GridTr_dtor_func data_dtor;
 };
 
 struct GridTr_hash_table_s *
-GridTr_create_hash_table(uint initial_size, GridTr_destructor_func data_dtor);
+GridTr_create_hash_table(uint initial_size, GridTr_dtor_func data_dtor);
 
 void GridTr_destroy_hash_table(struct GridTr_hash_table_s **tabler);
 

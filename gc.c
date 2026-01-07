@@ -1,5 +1,5 @@
 #include "gc.h"
-#include "array.h"
+#include "hash.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,25 +25,23 @@ struct GridTr_gc_s *GridTr_create_garbage_collector() {
   gc->dtors_table = GridTr_create_hash_table(
       256, NULL); // destructor functions aren't destructed.
   return gc;
-  a
 }
 
-void GridTr_add_garbage_collector_destructor(
-    struct GridTr_gc_s *gc, const char *type,
-    GridTr_destructor_func destructor) {
-  if (!gc || !type || !destructor)
+void GridTr_add_garbage_collector_dtor(struct GridTr_gc_s *gc, const char *type,
+                                       GridTr_dtor_func dtor) {
+  if (!gc || !type || !dtor)
     return;
   uint64 hash = GridTr_hash_str_fnv1a(type);
   void **slot = GridTr_hash_table_add_or_get(gc->dtors_table, hash);
-  *slot = destructor;
+  *slot = dtor;
 }
 
-GridTr_destructor_func
-GridTr_get_garbage_collector_destructor(struct GridTr_gc_s *gc, uint64 hash) {
+GridTr_dtor_func GridTr_get_garbage_collector_dtor(struct GridTr_gc_s *gc,
+                                                   uint64 hash) {
   if (!gc)
     return NULL;
   void **slot = GridTr_hash_table_maybe_get(gc->dtors_table, hash);
-  return slot ? (GridTr_destructor_func)(*slot) : NULL;
+  return slot ? (GridTr_dtor_func)(*slot) : NULL;
 }
 
 void *GridTr_allocate_for_garbage_collection(struct GridTr_gc_s *gc,
@@ -94,8 +92,7 @@ void GridTr_collect_garbage(struct GridTr_gc_s *gc) {
     uint i = gc->to_sweep->num_elems - 1;
     struct g_s *g = (struct g_s *)GridTr_array_get(gc->to_sweep, i);
     if (g && g->data) {
-      GridTr_destructor_func dtor =
-          GridTr_get_garbage_collector_destructor(gc, g->hash);
+      GridTr_dtor_func dtor = GridTr_get_garbage_collector_dtor(gc, g->hash);
       if (dtor) {
         for (uint j = 0; j < g->num_elems; j++) {
           void *ptr = (char *)g->data + j * g->elem_size;

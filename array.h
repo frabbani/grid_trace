@@ -10,6 +10,7 @@ struct GridTr_array_s {
   uint32 grow;
   const char *file;
   int line;
+  const char *oftype;
 };
 
 struct GridTr_array_s *GridTr_create_array_(uint32 elem_size,

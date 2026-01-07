@@ -25,6 +25,7 @@ struct GridTr_array_s *GridTr_create_array_(uint32 elem_size,
   array->grow = grow;
   array->file = file;
   array->line = line;
+  array->oftype = "";
   return array;
 }
 
@@ -38,6 +39,20 @@ void GridTr_destroy_array(struct GridTr_array_s **array) {
   if (!array || !*array)
     return;
 
+  GridTr_free((*array)->data);
+  GridTr_free(*array);
+  *array = NULL;
+}
+
+void GridTr_ddestroy_array(struct GridTr_array_s **array,
+                           GridTr_dtor_func dtor) {
+  if (!array || !*array)
+    return;
+  if (dtor) {
+    for (uint i = 0; i < (*array)->num_elems; i++) {
+      dtor(GridTr_array_get(*array, i));
+    }
+  }
   GridTr_free((*array)->data);
   GridTr_free(*array);
   *array = NULL;
@@ -140,7 +155,7 @@ void *GridTr_reuse_array_get(struct GridTr_reuse_array_s *array, uint index) {
     return NULL;
   if (!array->used[index])
     return NULL;
-  printf("%s - used: %u\n", __func__, array->used[index]);
+  printf("<%s> - used: %u\n", __func__, array->used[index]);
   return GridTr_array_get(array->array, index);
 }
 

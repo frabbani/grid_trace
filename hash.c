@@ -14,7 +14,7 @@ uint64 GridTr_hash_str_fnv1a(const char *s) {
 }
 
 struct GridTr_hash_table_s *
-GridTr_create_hash_table(uint initial_size, GridTr_destructor_func data_dtor) {
+GridTr_create_hash_table(uint initial_size, GridTr_dtor_func data_dtor) {
   struct GridTr_hash_table_s *table =
       GridTr_new(sizeof(struct GridTr_hash_table_s));
   if (!table)
@@ -27,6 +27,7 @@ GridTr_create_hash_table(uint initial_size, GridTr_destructor_func data_dtor) {
   for (uint i = 0; i < table->size; i++) {
     table->entries[i] =
         GridTr_create_array(sizeof(struct GridTr_hash_table_entry_s), 8, 8);
+    table->entries[i]->oftype = GridTr_oftype(struct GridTr_hash_table_entry_s);
   }
   return table;
 }
