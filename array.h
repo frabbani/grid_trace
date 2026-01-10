@@ -26,6 +26,9 @@ void GridTr_array_add(struct GridTr_array_s *array, const void *elem);
 
 void *GridTr_array_get(struct GridTr_array_s *array, uint32 index);
 
+const void *GridTr_array_get_ro(const struct GridTr_array_s *array,
+                                uint32 index);
+
 void GridTr_array_swap_free(struct GridTr_array_s *array, uint32 index);
 
 // clang-format off

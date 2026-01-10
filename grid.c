@@ -154,3 +154,16 @@ struct GridTr_grid_cell_s *GridTr_grid_get_grid_cell(struct GridTr_grid_s *grid,
 
   return NULL;
 }
+
+const struct GridTr_grid_cell_s *
+GridTr_grid_get_grid_cell_ro(const struct GridTr_grid_s *grid,
+                             struct ivec3_s lrc) {
+  if (!grid) {
+    return NULL;
+  }
+  uint64 hash = ivec3_fnv1a(lrc);
+  const struct GridTr_grid_cell_s *cell =
+      (const struct GridTr_grid_cell_s *)GridTr_hash_table_maybe_get_ro(
+          grid->cell_table, hash);
+  return cell;
+}

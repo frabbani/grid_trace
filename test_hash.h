@@ -25,6 +25,8 @@ static void counting_dtor(void *p) {
   g_dtor_calls++;
 }
 
+static void simple_dtor(void *p) { GridTr_free(p); }
+
 /* ---------------- tests ---------------- */
 
 static void test_create_and_destroy_table(void) {
@@ -221,6 +223,53 @@ static void test_add_or_get_returns_valid_slot_even_when_rehashing(void) {
   GridTr_destroy_hash_table(&t);
 }
 
+void test_get_all() {
+  struct GridTr_hash_table_s *t = GridTr_create_hash_table(256, simple_dtor);
+  ASSERT_TRUE(t != NULL);
+
+  // Insert some test elements
+  const int N = 300;
+  for (uint i = 0; i < N; i++) {
+    uint64 h = u64_hash_u32(i);
+    void **slot = GridTr_hash_table_add_or_get(t, h);
+    ASSERT_TRUE(slot != NULL);
+    *slot = GridTr_new(16);
+    char *p = (char *)(*slot);
+    sprintf(p, "elem %u", i);
+  }
+
+  bool *finds = GridTr_new(sizeof(bool) * N);
+  const void **data_ptrs = NULL;
+  uint32 num_elems = 0;
+  data_ptrs = GridTr_hash_table_get_all_ro(t, &num_elems);
+  ASSERT_EQ_U(num_elems, N);
+  for (uint i = 0; i < num_elems; i++) {
+    const char *p = (const char *)data_ptrs[i];
+    ASSERT_TRUE(p != NULL);
+  }
+
+  for (uint i = 0; i < N; i++) {
+    char tok[16];
+    sprintf(tok, "elem %u", i);
+    finds[i] = false;
+    for (uint j = 0; j < N; j++) {
+      const char *p = (const char *)data_ptrs[j];
+      bool match = strncmp(p, tok, 16) == 0;
+      if (match) {
+        finds[i] = true;
+        break;
+      }
+    }
+  }
+  for (uint i = 0; i < N; i++) {
+    ASSERT_TRUE(finds[i]);
+  }
+  void *p = (void *)data_ptrs;
+  GridTr_destroy_hash_table(&t);
+  GridTr_free(p);
+  GridTr_free(finds);
+}
+
 /* -------------- runner -------------- */
 
 void run_hash_table_tests(void) {
@@ -233,5 +282,6 @@ void run_hash_table_tests(void) {
   test_destroy_calls_data_dtor_for_all_live_entries();
   test_rehash_preserves_entries_and_total();
   test_add_or_get_returns_valid_slot_even_when_rehashing();
+  test_get_all();
   printf("[hash] tests run: %d, failed: %d\n", g_tests_run, g_tests_failed);
 }

@@ -64,6 +64,13 @@ void *GridTr_array_get(struct GridTr_array_s *array, uint32 index) {
   return (char *)array->data + (index * array->elem_size);
 }
 
+const void *GridTr_array_get_ro(const struct GridTr_array_s *array,
+                                uint32 index) {
+  if (!array || index >= array->num_elems)
+    return NULL;
+  return (char *)array->data + (index * array->elem_size);
+}
+
 void GridTr_array_add(struct GridTr_array_s *array, const void *elem) {
   if (!array || !elem)
     return;

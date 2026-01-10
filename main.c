@@ -66,9 +66,9 @@ int main(int argc, char *args[]) {
   // run_geom_tests();
   // run_array_tests();
   //  run_reuse_array_tests();
-  // run_hash_table_tests();
+  run_hash_table_tests();
   // run_gc_tests();
-  run_collide_tests();
+  // run_collide_tests();
 
   // alloc/free test
   /*

@@ -37,4 +37,12 @@ bool GridTr_hash_table_find(const struct GridTr_hash_table_s *table,
 void **GridTr_hash_table_maybe_get(struct GridTr_hash_table_s *table,
                                    uint64 hash);
 
+const void *
+GridTr_hash_table_maybe_get_ro(const struct GridTr_hash_table_s *table,
+                               uint64 hash);
+
+const void **
+GridTr_hash_table_get_all_ro(const struct GridTr_hash_table_s *table,
+                             uint32 *num_elems);
+
 bool GridTr_hash_table_free(struct GridTr_hash_table_s *table, uint64 hash);
