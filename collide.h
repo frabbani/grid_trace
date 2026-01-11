@@ -26,7 +26,7 @@ struct GridTr_collider_s {
   float radius;
   uint edge_count;
   struct GridTr_plane_s *edge_planes;
-  float *edge_dists;
+  float *edge_lens;
   struct vec3_s *ps;
   struct vec3_s *es;
 };
@@ -40,5 +40,8 @@ void GridTr_destroy_collider(struct GridTr_collider_s *collider);
 
 bool GridTr_collider_touches_aabb(const struct GridTr_collider_s *collider,
                                   const struct GridTr_aabb_s *aabb);
+
+void GridTr_copy_collider(struct GridTr_collider_s *to,
+                          const struct GridTr_collider_s *from);
 
 void GridTr_collider_dtor(void *ptr);

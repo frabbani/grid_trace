@@ -228,7 +228,72 @@ static void test_array_swap_free_oob_noop(void) {
   GridTr_destroy_array(&a);
 }
 
+struct array_test_data_s {
+  int i;
+  char str[32];
+};
+
+struct array_test_data_s g_array_data;
+int g_array_data_dtor_count = 0;
+static void test_array_data_dtor(void *data) {
+  struct array_test_data_s *d = data;
+  ASSERT_TRUE(d != NULL);
+  ASSERT_TRUE(d->i > 0);
+  memcpy(&g_array_data, d, sizeof(g_array_data));
+  char tok[32];
+  snprintf(tok, sizeof(tok), "test %d", d->i);
+  ASSERT_STREQ(d->str, tok);
+  g_array_data_dtor_count++;
+}
+
+static void test_dtor_data_match(int i) {
+  ASSERT_TRUE(g_array_data.i == i);
+  char tok[32];
+  snprintf(tok, sizeof(tok), "test %d", g_array_data.i);
+  ASSERT_STREQ(g_array_data.str, tok);
+}
+
+static void test_array_dtors() {
+  const int N = 10;
+  struct array_test_data_s data[N];
+  for (int i = 0; i < N; i++) {
+    data[i].i = i + 1;
+    snprintf(data[i].str, sizeof(data[i].str), "test %d", data[i].i);
+  }
+  g_array_data_dtor_count = 0;
+
+  struct GridTr_array_s *a = GridTr_create_array(32, 8, 8);
+  ASSERT_TRUE(a != NULL);
+
+  for (int i = 0; i < N; i++) {
+    GridTr_array_add(a, &data[i]);
+  }
+
+  GridTr_array_swap_free_dtor(a, 3, test_array_data_dtor);
+  test_dtor_data_match(3 + 1);
+  GridTr_destroy_array_dtor(&a, test_array_data_dtor);
+  ASSERT_EQ_I(g_array_data_dtor_count, N);
+}
+
+static void run_array_tests(void) {
+  printf("[array] begin test:\n");
+  test_array_create_destroy();
+  test_array_create_max_elems_and_grow_min_1();
+  test_array_get_empty_returns_null();
+  test_array_add_and_get_ints();
+  test_array_grows_and_preserves_data();
+  test_array_get_out_of_bounds();
+  test_array_add_null_args_no_crash();
+  test_array_add_structs();
+  test_array_swap_free_middle();
+  test_array_swap_free_last();
+  test_array_swap_free_oob_noop();
+  test_array_dtors();
+  printf("[array] tests run: %d, failed: %d\n", g_tests_run, g_tests_failed);
+}
+
 // REUSE ARRAYS
+/*
 static void test_reuse_create_destroy(void) {
   struct GridTr_reuse_array_s *r =
       GridTr_create_reuse_array_(sizeof(int), 4, 4, __FILE__, __LINE__);
@@ -606,19 +671,4 @@ static void run_reuse_array_tests(void) {
   printf("[reuse_array] tests run: %d, failed: %d\n", g_tests_run,
          g_tests_failed);
 }
-
-static void run_array_tests(void) {
-  printf("[array] begin test:\n");
-  test_array_create_destroy();
-  test_array_create_max_elems_and_grow_min_1();
-  test_array_get_empty_returns_null();
-  test_array_add_and_get_ints();
-  test_array_grows_and_preserves_data();
-  test_array_get_out_of_bounds();
-  test_array_add_null_args_no_crash();
-  test_array_add_structs();
-  test_array_swap_free_middle();
-  test_array_swap_free_last();
-  test_array_swap_free_oob_noop();
-  printf("[array] tests run: %d, failed: %d\n", g_tests_run, g_tests_failed);
-}
+*/

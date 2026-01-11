@@ -74,19 +74,19 @@ void GridTr_create_collider(struct GridTr_collider_s *collider, uint id,
   collider->ps = GridTr_new(nps * sizeof(struct vec3_s));
   collider->es = GridTr_new(nps * sizeof(struct vec3_s));
   collider->edge_planes = GridTr_new(nps * sizeof(struct GridTr_plane_s));
-  collider->edge_dists = GridTr_new(nps * sizeof(float));
+  collider->edge_lens = GridTr_new(nps * sizeof(float));
   for (uint i = 0; i < nps; i++) {
     collider->ps[i] = ps[i];
     collider->es[i] = point_vec(collider->ps[i], collider->ps[(i + 1) % nps]);
-    collider->edge_dists[i] = vec3_lensq(collider->es[i]);
-    if (collider->edge_dists[i] > TOL_SQ) {
-      collider->edge_dists[i] = sqrtf(collider->edge_dists[i]);
+    collider->edge_lens[i] = vec3_lensq(collider->es[i]);
+    if (collider->edge_lens[i] > TOL_SQ) {
+      collider->edge_lens[i] = sqrtf(collider->edge_lens[i]);
       collider->es[i] =
-          vec3_mul(collider->es[i], 1.0f / collider->edge_dists[i]);
+          vec3_mul(collider->es[i], 1.0f / collider->edge_lens[i]);
       collider->edge_planes[i] = GridTr_create_plane(
           vec3_cross(collider->plane.n, collider->es[i]), collider->ps[i]);
     } else {
-      collider->edge_dists[i] = 0.0f;
+      collider->edge_lens[i] = 0.0f;
       collider->es[i] = vec3_zero();
       collider->edge_planes[i].n = vec3_zero();
       collider->edge_planes[i].dist = 0.0f;
@@ -100,8 +100,30 @@ void GridTr_destroy_collider(struct GridTr_collider_s *collider) {
   GridTr_free(collider->ps);
   GridTr_free(collider->es);
   GridTr_free(collider->edge_planes);
-  GridTr_free(collider->edge_dists);
-  memset(collider, 0, sizeof(struct GridTr_collider_s));
+  GridTr_free(collider->edge_lens);
+  // memset(collider, 0, sizeof(struct GridTr_collider_s));
+}
+
+void GridTr_copy_collider(struct GridTr_collider_s *to,
+                          const struct GridTr_collider_s *from) {
+  if (to == NULL || from == NULL)
+    return;
+  to->poly_id = from->poly_id;
+  to->plane = from->plane;
+  to->o = from->o;
+  to->radius = from->radius;
+  to->edge_count = from->edge_count;
+  to->ps = GridTr_new(from->edge_count * sizeof(struct vec3_s));
+  to->es = GridTr_new(from->edge_count * sizeof(struct vec3_s));
+  to->edge_lens = GridTr_new(from->edge_count * sizeof(float));
+  to->edge_planes =
+      GridTr_new(from->edge_count * sizeof(struct GridTr_plane_s));
+  for (uint i = 0; i < from->edge_count; i++) {
+    to->ps[i] = from->ps[i];
+    to->es[i] = from->es[i];
+    to->edge_lens[i] = from->edge_lens[i];
+    to->edge_planes[i] = from->edge_planes[i];
+  }
 }
 
 bool GridTr_collider_touches_aabb(const struct GridTr_collider_s *collider,

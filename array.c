@@ -44,8 +44,8 @@ void GridTr_destroy_array(struct GridTr_array_s **array) {
   *array = NULL;
 }
 
-void GridTr_ddestroy_array(struct GridTr_array_s **array,
-                           GridTr_dtor_func dtor) {
+void GridTr_destroy_array_dtor(struct GridTr_array_s **array,
+                               GridTr_dtor_func dtor) {
   if (!array || !*array)
     return;
   if (dtor) {
@@ -92,6 +92,32 @@ void GridTr_array_add(struct GridTr_array_s *array, const void *elem) {
   array->num_elems++;
 }
 
+void GridTr_array_swap_free(struct GridTr_array_s *array, uint32 index) {
+  if (!array || index >= array->num_elems)
+    return;
+  if (array->num_elems > 1 && index != array->num_elems - 1) {
+    void *elem = GridTr_array_get(array, index);
+    void *last = GridTr_array_get(array, array->num_elems - 1);
+    memcpy(elem, last, array->elem_size);
+  }
+  --array->num_elems;
+}
+
+void GridTr_array_swap_free_dtor(struct GridTr_array_s *array, uint32 index,
+                                 GridTr_dtor_func dtor) {
+  if (!array || index >= array->num_elems)
+    return;
+  void *elem = GridTr_array_get(array, index);
+  if (dtor) {
+    dtor(elem);
+  }
+  if (array->num_elems > 1 && index != array->num_elems - 1) {
+    void *last = GridTr_array_get(array, array->num_elems - 1);
+    memcpy(elem, last, array->elem_size);
+  }
+  --array->num_elems;
+}
+
 struct GridTr_reuse_array_s *
 GridTr_create_reuse_array_(uint elem_size, uint max_elems, uint grow,
                            const char *file, int line) {
@@ -107,17 +133,6 @@ GridTr_create_reuse_array_(uint elem_size, uint max_elems, uint grow,
   reuse->file = file;
   reuse->line = line;
   return reuse;
-}
-
-void GridTr_array_swap_free(struct GridTr_array_s *array, uint32 index) {
-  if (!array || index >= array->num_elems)
-    return;
-  if (array->num_elems > 1 && index != array->num_elems - 1) {
-    void *elem = GridTr_array_get(array, index);
-    void *last = GridTr_array_get(array, array->num_elems - 1);
-    memcpy(elem, last, array->elem_size);
-  }
-  --array->num_elems;
 }
 
 void GridTr_destroy_reuse_array(struct GridTr_reuse_array_s **array) {

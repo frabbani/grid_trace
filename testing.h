@@ -91,3 +91,20 @@ static bool v3eq(struct vec3_s a, struct vec3_s b, float eps) {
       return;                                                                  \
     }                                                                          \
   } while (0)
+
+#define ASSERT_STREQ(a, b)                                                     \
+  do {                                                                         \
+    g_tests_run++;                                                             \
+    const char *_a = (a);                                                      \
+    const char *_b = (b);                                                      \
+    if ((_a == NULL && _b != NULL) || (_a != NULL && _b == NULL) ||            \
+        (_a != NULL && _b != NULL && strcmp(_a, _b) != 0)) {                   \
+      g_tests_failed++;                                                        \
+      printf("[FAIL] %s:%d: ASSERT_STREQ(%s,%s) got \"%s\" vs \"%s\"\n",       \
+             __FILE__, __LINE__, #a, #b, _a ? _a : "(null)",                   \
+             _b ? _b : "(null)");                                              \
+      return;                                                                  \
+    }                                                                          \
+  } while (0)
+
+// add a blank line to avoid backslash newline warning

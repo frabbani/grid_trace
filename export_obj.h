@@ -88,8 +88,8 @@ void GridTr_export_grid_to_obj(const struct GridTr_grid_s *grid,
     const struct GridTr_grid_cell_s *cell =
         (const struct GridTr_grid_cell_s *)cell_ptrs[i];
     // Write cell info as comments
-    printf("# Cell <%d, %d, %d>  %u colliders\n", cell->lrc.x, cell->lrc.y,
-           cell->lrc.z, cell->num_colliders);
+    printf("# Cell <%d, %d, %d>  %u colliders\n", cell->crl.x, cell->crl.y,
+           cell->crl.z, cell->num_colliders);
   }
   void *p = (void *)cell_ptrs;
   GridTr_free(p);

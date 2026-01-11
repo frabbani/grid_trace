@@ -26,10 +26,16 @@ void GridTr_array_add(struct GridTr_array_s *array, const void *elem);
 
 void *GridTr_array_get(struct GridTr_array_s *array, uint32 index);
 
+void GridTr_destroy_array_dtor(struct GridTr_array_s **array,
+                               GridTr_dtor_func dtor);
+
 const void *GridTr_array_get_ro(const struct GridTr_array_s *array,
                                 uint32 index);
 
 void GridTr_array_swap_free(struct GridTr_array_s *array, uint32 index);
+
+void GridTr_array_swap_free_dtor(struct GridTr_array_s *array, uint32 index,
+                                 GridTr_dtor_func dtor);
 
 // clang-format off
 #define GridTr_create_array(t, max, grow) GridTr_create_array_(t, max, grow, __FILE__, __LINE__)
