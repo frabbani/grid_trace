@@ -80,7 +80,7 @@ void GridTr_rehash_hash_table(struct GridTr_hash_table_s *table) {
       if (e) {
         table->total_elems++;
         struct GridTr_hash_table_entry_s copy = *e;
-        uint new_bucket = e->hash % new_size;
+        uint32 new_bucket = (uint32)(e->hash % (uint64)new_size);
         GridTr_array_add(new_entries[new_bucket], &copy);
       }
     }
@@ -98,7 +98,7 @@ void **GridTr_hash_table_add_or_get(struct GridTr_hash_table_s *table,
                                     uint64 hash) {
   if (!table)
     return NULL;
-  uint bucket = hash % table->size;
+  uint32 bucket = (uint32)(hash % (uint64)table->size);
   struct GridTr_array_s *arr = table->entries[bucket];
   uint n = arr->num_elems;
   for (uint i = 0; i < n; i++) {
@@ -121,7 +121,7 @@ void **GridTr_hash_table_add_or_get(struct GridTr_hash_table_s *table,
       GridTr_HASH_TABLE_LOAD_FACTOR) {
     GridTr_rehash_hash_table(table);
     // relook up
-    uint bucket = hash % table->size;
+    uint32 bucket = (uint32)(hash % (uint64)table->size);
     struct GridTr_array_s *arr = table->entries[bucket];
     uint n = arr->num_elems;
     for (uint i = 0; i < n; i++) {
@@ -139,7 +139,7 @@ bool GridTr_hash_table_find(const struct GridTr_hash_table_s *table,
   if (!table)
     return false;
 
-  uint bucket = hash % table->size;
+  uint32 bucket = (uint32)(hash % (uint64)table->size);
 
   struct GridTr_array_s *arr = table->entries[bucket];
   uint n = arr->num_elems;
@@ -156,11 +156,11 @@ void **GridTr_hash_table_maybe_get(struct GridTr_hash_table_s *table,
   if (!table)
     return NULL;
 
-  uint bucket = hash % table->size;
+  uint32 bucket = (uint32)(hash % (uint64)table->size);
 
   struct GridTr_array_s *arr = table->entries[bucket];
-  uint n = arr->num_elems;
-  for (uint i = 0; i < n; i++) {
+  uint32 n = arr->num_elems;
+  for (uint32 i = 0; i < n; i++) {
     struct GridTr_hash_table_entry_s *e = GridTr_array_get(arr, i);
     if (e && e->hash == hash)
       return &e->data;
@@ -174,11 +174,11 @@ GridTr_hash_table_maybe_get_ro(const struct GridTr_hash_table_s *table,
   if (!table)
     return NULL;
 
-  uint bucket = hash % table->size;
+  uint32 bucket = (uint32)(hash % (uint64)table->size);
 
   struct GridTr_array_s *arr = table->entries[bucket];
-  uint n = arr->num_elems;
-  for (uint i = 0; i < n; i++) {
+  uint32 n = arr->num_elems;
+  for (uint32 i = 0; i < n; i++) {
     const struct GridTr_hash_table_entry_s *e = GridTr_array_get_ro(arr, i);
     if (e && e->hash == hash)
       return e->data;
@@ -228,10 +228,10 @@ bool GridTr_hash_table_free(struct GridTr_hash_table_s *table, uint64 hash) {
   if (!table)
     return false;
 
-  uint bucket = hash % table->size;
+  uint32 bucket = (uint32)(hash % (uint64)table->size);
   struct GridTr_array_s *arr = table->entries[bucket];
-  uint n = arr->num_elems;
-  for (uint i = 0; i < n; i++) {
+  uint32 n = arr->num_elems;
+  for (uint32 i = 0; i < n; i++) {
     struct GridTr_hash_table_entry_s *e =
         GridTr_array_get(arr, i); // this also checks used
     if (e && e->hash == hash) {

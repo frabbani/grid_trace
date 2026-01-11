@@ -103,11 +103,10 @@ int main(int argc, char *args[]) {
   printf(" * total requested memory (lifetime): %f kbs\n",
          (float)g_requested_mem / 1024.0f);
   printf(" * net allocation count (current)...: %u <---\n", g_num_allocs);
-  if (g_num_allocs > 0) {
+  if (g_num_allocs > 0 && !g_tests_failed) {
     for (uint i = 0; i < g_num_allocs; i++) {
       struct alloc_s *a = &g_alloc_list[i];
-      if (a->addr && a->size)
-        printf("    - LEAK: size %zu @ %s:%d\n", a->size, a->file, a->line);
+      printf("    - LEAK: size %zu @ %s:%d\n", a->size, a->file, a->line);
     }
   }
   printf(" * total allocation count (lifetime): %u\n", g_total_allocs);

@@ -11,13 +11,31 @@ struct ivec3_s ivec3_set(int x, int y, int z) {
 
 uint64 ivec3_fnv1a(struct ivec3_s v) {
   uint64 h = 1469598103934665603ull; // FNV offset
-  h ^= (uint64)v.x;
+  uint x = (uint)v.x;
+  uint y = (uint)v.y;
+  uint z = (uint)v.z;
+  h ^= (uint64)x;
   h *= 1099511628211ull;
-  h ^= (uint64)v.y;
+  h ^= (uint64)y;
   h *= 1099511628211ull;
-  h ^= (uint64)v.z;
+  h ^= (uint64)z;
   h *= 1099511628211ull;
   return h;
+}
+
+struct ivec3_s ivec3_min(struct ivec3_s a, struct ivec3_s b) {
+  struct ivec3_s r;
+  r.x = MIN(a.x, b.x);
+  r.y = MIN(a.y, b.y);
+  r.z = MIN(a.z, b.z);
+  return r;
+}
+struct ivec3_s ivec3_max(struct ivec3_s a, struct ivec3_s b) {
+  struct ivec3_s r;
+  r.x = MAX(a.x, b.x);
+  r.y = MAX(a.y, b.y);
+  r.z = MAX(a.z, b.z);
+  return r;
 }
 
 struct vec2_s vec2_set(float x, float y) {

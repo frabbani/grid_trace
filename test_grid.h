@@ -105,6 +105,15 @@ void grid_test_add_single_collider() {
   ps[1] = vec3_set(+6.0f, +6.0f, 12.0f);
   ps[2] = vec3_set(+6.0f, -6.0f, 12.0f);
   ps[3] = vec3_set(-6.0f, -6.0f, 12.0f);
+
+  struct ivec3_s min, max;
+  min = max = GridTr_get_grid_cell_for_p(ps[0], g.cell_size);
+  for (int i = 1; i < 4; i++) {
+    struct ivec3_s crl = GridTr_get_grid_cell_for_p(ps[i], g.cell_size);
+    min = ivec3_min(min, crl);
+    max = ivec3_max(max, crl);
+  }
+
   struct vec3_s n =
       vec3_cross(point_vec(ps[0], ps[1]), point_vec(ps[0], ps[2]));
   struct GridTr_plane_s plane = GridTr_create_plane(n, ps[0]);
@@ -116,7 +125,13 @@ void grid_test_add_single_collider() {
   uint32 num_cells;
   const void **cells = GridTr_grid_get_all_grid_cells(&g, &num_cells);
   ASSERT_TRUE(cells != NULL);
-  ASSERT_EQ_U(num_cells, 12);
+  ASSERT_EQ_U(num_cells, 16);
+  for (uint i = 0; i < num_cells; i++) {
+    const struct GridTr_grid_cell_s *cell =
+        (const struct GridTr_grid_cell_s *)cells[i];
+    ASSERT_TRUE(cell != NULL);
+    ASSERT_EQ_U(cell->num_colliders, 1);
+  }
 
   GridTr_free(cells);
   GridTr_destroy_collider(&coll);

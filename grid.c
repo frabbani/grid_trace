@@ -95,6 +95,7 @@ void GridTr_add_collider_to_grid(struct GridTr_grid_s *grid,
 
   struct ivec3_s crl_min, crl_max, crl;
   struct GridTr_aabb_s aabb;
+  int total = 0;
   GridTr_get_collider_grid_cell_exts(collider, grid->cell_size, &crl_min,
                                      &crl_max, true);
   for (int z = crl_min.z; z <= crl_max.z; z++) {
@@ -104,16 +105,21 @@ void GridTr_add_collider_to_grid(struct GridTr_grid_s *grid,
         GridTr_get_aabb_for_grid_cell(crl, grid->cell_size, &aabb);
         if (!GridTr_collider_touches_aabb(collider, &aabb))
           continue;
-        struct GridTr_grid_cell_s *cell =
-            GridTr_grid_get_grid_cell(grid, (struct ivec3_s){x, y, z});
+        struct GridTr_grid_cell_s *cell = GridTr_grid_get_grid_cell(grid, crl);
         if (cell) {
+          // printf(" * %s - adding collider %u to <%d, %d, %d>\n",
+          // __FUNCTION__,
+          //        collider->poly_id, cell->crl.x, cell->crl.y, cell->crl.z);
           GridTr_grid_cell_add_collider_idx(cell, idx);
+          total++;
         } else {
           printf("<%s> - why was this cell not allocated???\n", __FUNCTION__);
         }
       }
     }
   }
+  // printf("<%s> - collider %u touched %d cells\n", __FUNCTION__,
+  //        collider->poly_id, total);
 }
 
 void GridTr_create_grid(struct GridTr_grid_s *grid, float cell_size) {
