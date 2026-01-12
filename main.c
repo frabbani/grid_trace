@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "export_obj.h"
 #include "gc.h"
 #include "hash.h"
 
@@ -86,6 +87,49 @@ void run_mem_tests() {
   GridTr_free(p);
 }
 
+void test_export() {
+  struct GridTr_grid_s g;
+  memset(&g, 0, sizeof(struct GridTr_grid_s));
+  GridTr_create_grid(&g, 5.0f);
+
+  struct GridTr_shape_s box;
+  GridTr_load_shape_from_obj(&box, "cube.obj");
+  char *str =
+      GridTr_export_shape_to_obj_str(&box, vec3_set(0.0f, 0.0f, 0.0f), 5.0f, 0);
+  FILE *fp = fopen("test.obj", "w");
+  if (fp) {
+    fputs(str, fp);
+    fclose(fp);
+  }
+  GridTr_free_shape(&box);
+  GridTr_free(str);
+
+  struct GridTr_collider_s coll;
+  struct vec3_s ps[3];
+  ps[0] = vec3_set(-6.0f, -6.0f, 1.0f);
+  ps[1] = vec3_set(+6.0f, -6.0f, 1.0f);
+  ps[2] = vec3_set(+0.0f, +6.0f, 10.0f);
+
+  // struct ivec3_s min, max;
+  // min = max = GridTr_get_grid_cell_for_p(ps[0], g.cell_size);
+  // for (int i = 1; i < 4; i++) {
+  //   struct ivec3_s crl = GridTr_get_grid_cell_for_p(ps[i], g.cell_size);
+  //   min = ivec3_min(min, crl);
+  //   max = ivec3_max(max, crl);
+  // }
+
+  struct vec3_s n =
+      vec3_cross(point_vec(ps[0], ps[1]), point_vec(ps[0], ps[2]));
+  struct GridTr_plane_s plane = GridTr_create_plane(n, ps[0]);
+  int num_ps = sizeof(ps) / sizeof(struct vec3_s);
+  GridTr_create_collider(&coll, 123, ps, num_ps, plane);
+  GridTr_add_collider_to_grid(&g, &coll);
+  GridTr_export_grid_to_obj(&g, "output.obj");
+
+  GridTr_destroy_collider(&coll);
+  GridTr_destroy_grid(&g);
+}
+
 int main(int argc, char *args[]) {
   printf("hello world!\n");
   // run_geom_tests();
@@ -94,7 +138,8 @@ int main(int argc, char *args[]) {
   // run_hash_table_tests();
   // run_gc_tests();
   // run_collide_tests();
-  run_grid_tests();
+  // run_grid_tests();
+  test_export();
 
   printf("***************\n");
   printf("allocation stats:\n");

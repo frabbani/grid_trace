@@ -106,13 +106,13 @@ void grid_test_add_single_collider() {
   ps[2] = vec3_set(+6.0f, -6.0f, 12.0f);
   ps[3] = vec3_set(-6.0f, -6.0f, 12.0f);
 
-  struct ivec3_s min, max;
-  min = max = GridTr_get_grid_cell_for_p(ps[0], g.cell_size);
-  for (int i = 1; i < 4; i++) {
-    struct ivec3_s crl = GridTr_get_grid_cell_for_p(ps[i], g.cell_size);
-    min = ivec3_min(min, crl);
-    max = ivec3_max(max, crl);
-  }
+  // struct ivec3_s min, max;
+  // min = max = GridTr_get_grid_cell_for_p(ps[0], g.cell_size);
+  // for (int i = 1; i < 4; i++) {
+  //   struct ivec3_s crl = GridTr_get_grid_cell_for_p(ps[i], g.cell_size);
+  //   min = ivec3_min(min, crl);
+  //   max = ivec3_max(max, crl);
+  // }
 
   struct vec3_s n =
       vec3_cross(point_vec(ps[0], ps[1]), point_vec(ps[0], ps[2]));
