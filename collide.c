@@ -1,5 +1,6 @@
 #include "collide.h"
 #include <math.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -67,31 +68,52 @@ void GridTr_create_collider(struct GridTr_collider_s *collider, uint id,
                             struct GridTr_plane_s plane) {
   if (!collider || !ps || nps < 3)
     return;
-
+  // printf("<%s>\n", __FUNCTION__);
   collider->poly_id = id;
   collider->plane = plane;
   collider->edge_count = nps;
   collider->ps = GridTr_new(nps * sizeof(struct vec3_s));
   collider->es = GridTr_new(nps * sizeof(struct vec3_s));
   collider->edge_planes = GridTr_new(nps * sizeof(struct GridTr_plane_s));
+  collider->o = ps[0];
+  for (uint i = 1; i < nps; i++) {
+    collider->o = vec3_add(collider->o, ps[i]);
+  }
+  collider->o = vec3_mul(collider->o, 1.0f / (float)nps);
+  // printf(" * plane detail: n=<%f, %f, %f> dist=%f\n", collider->plane.n.x,
+  //        collider->plane.n.y, collider->plane.n.z, collider->plane.dist);
+
   collider->edge_lens = GridTr_new(nps * sizeof(float));
   for (uint i = 0; i < nps; i++) {
     collider->ps[i] = ps[i];
-    collider->es[i] = point_vec(collider->ps[i], collider->ps[(i + 1) % nps]);
+    collider->es[i] = point_vec(ps[i], ps[(i + 1) % nps]);
     collider->edge_lens[i] = vec3_lensq(collider->es[i]);
+    // printf(" * edge: (%u -> %u)\n", i, (i + 1) % nps);
     if (collider->edge_lens[i] > TOL_SQ) {
       collider->edge_lens[i] = sqrtf(collider->edge_lens[i]);
       collider->es[i] =
           vec3_mul(collider->es[i], 1.0f / collider->edge_lens[i]);
       collider->edge_planes[i] = GridTr_create_plane(
-          vec3_cross(collider->plane.n, collider->es[i]), collider->ps[i]);
+          vec3_cross(collider->es[i], collider->plane.n), collider->ps[i]);
+
+      // printf("    + length=%f d=<%f, %f, %f>\n", collider->edge_lens[i],
+      //        collider->es[i].x, collider->es[i].y, collider->es[i].z);
+      // bool inside = vec3_dot(point_vec(collider->o, collider->ps[i]),
+      //                        collider->edge_planes[i].n) < 0;
+      // printf("    + plane detail: n=<%f, %f, %f> dist=%f (%s)\n",
+      //        collider->edge_planes[i].n.x, collider->edge_planes[i].n.y,
+      //        collider->edge_planes[i].n.z, collider->edge_planes[i].dist,
+      //        inside ? "inside" : "outside");
     } else {
+      printf("<%s> - poly %u edge: %u: degenerate\n", __FUNCTION__,
+             collider->poly_id, i);
       collider->edge_lens[i] = 0.0f;
       collider->es[i] = vec3_zero();
       collider->edge_planes[i].n = vec3_zero();
       collider->edge_planes[i].dist = 0.0f;
     }
   }
+  // printf("---\n");
 }
 
 void GridTr_destroy_collider(struct GridTr_collider_s *collider) {
@@ -108,6 +130,7 @@ void GridTr_copy_collider(struct GridTr_collider_s *to,
                           const struct GridTr_collider_s *from) {
   if (to == NULL || from == NULL)
     return;
+  // printf("<%s>\n", __FUNCTION__);
   to->poly_id = from->poly_id;
   to->plane = from->plane;
   to->o = from->o;
@@ -123,7 +146,11 @@ void GridTr_copy_collider(struct GridTr_collider_s *to,
     to->es[i] = from->es[i];
     to->edge_lens[i] = from->edge_lens[i];
     to->edge_planes[i] = from->edge_planes[i];
+    // printf(" * edge %u: plane detail: n=<%f, %f, %f> dist=%f\n", i,
+    //        to->edge_planes[i].n.x, to->edge_planes[i].n.y,
+    //        to->edge_planes[i].n.z, to->edge_planes[i].dist);
   }
+  // printf("---\n");
 }
 
 bool GridTr_collider_touches_aabb(const struct GridTr_collider_s *collider,
@@ -131,6 +158,16 @@ bool GridTr_collider_touches_aabb(const struct GridTr_collider_s *collider,
   struct vec3_s axes[3] = {
       {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}};
 
+  struct vec3_s aabb_ps[8];
+  struct vec3_s size = vec3_mul(aabb->halfsize, 2.0f);
+  // aabb_ps[0] = aabb->min;
+  // aabb_ps[1] = vec3_add(aabb->min, vec3_set(size.x, 0, 0));
+  // aabb_ps[2] = vec3_add(aabb->min, vec3_set(0, size.y, 0));
+  // aabb_ps[3] = vec3_add(aabb->min, vec3_set(size.x, size.y, 0));
+  // aabb_ps[4] = vec3_add(aabb->min, vec3_set(0, 0, size.z));
+  // aabb_ps[5] = vec3_add(aabb->min, vec3_set(size.x, 0, size.z));
+  // aabb_ps[6] = vec3_add(aabb->min, vec3_set(0, size.y, size.z));
+  // aabb_ps[7] = vec3_add(aabb->min, vec3_set(size.x, size.y, size.z));
   struct GridTr_sat_s sat;
 #define TEST_SAT                                                               \
   do {                                                                         \
@@ -148,15 +185,16 @@ bool GridTr_collider_touches_aabb(const struct GridTr_collider_s *collider,
   sat.d = collider->plane.n;
   TEST_SAT;
 
-  // for (int j = 0; j < collider->edge_count; j++) {
-  //   sat.d = collider->edge_planes[j].n;
-  //   TEST_SAT;
-  // }
+  for (int j = 0; j < collider->edge_count; j++) {
+    sat.d = collider->edge_planes[j].n;
+    TEST_SAT;
+  }
 
   for (int i = 0; i < 3; i++) {
     for (int j = 0; j < collider->edge_count; j++) {
       sat.d = vec3_cross(axes[i], collider->es[j]);
       if (vec3_lensq(sat.d) >= TOL_SQ) {
+        sat.d = vec3_norm(sat.d);
         TEST_SAT;
       }
     }

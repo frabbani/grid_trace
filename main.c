@@ -90,7 +90,7 @@ void run_mem_tests() {
 void test_export() {
   struct GridTr_grid_s g;
   memset(&g, 0, sizeof(struct GridTr_grid_s));
-  GridTr_create_grid(&g, 5.0f);
+  GridTr_create_grid(&g, 1.0f);
 
   struct GridTr_shape_s box;
   GridTr_load_shape_from_obj(&box, "cube.obj");
@@ -106,10 +106,18 @@ void test_export() {
 
   struct GridTr_collider_s coll;
   struct vec3_s ps[3];
-  ps[0] = vec3_set(-6.0f, -6.0f, 1.0f);
+  ps[0] = vec3_set(-3.0f, -6.0f, 1.0f);
   ps[1] = vec3_set(+6.0f, -6.0f, 1.0f);
-  ps[2] = vec3_set(+0.0f, +6.0f, 10.0f);
+  ps[2] = vec3_set(+0.0f, +6.0f, 1.0f);
 
+  fp = fopen("shape_output.obj", "w");
+  if (fp) {
+    fprintf(fp, "v %f %f %f\n", ps[0].x, ps[0].y, ps[0].z);
+    fprintf(fp, "v %f %f %f\n", ps[1].x, ps[1].y, ps[1].z);
+    fprintf(fp, "v %f %f %f\n", ps[2].x, ps[2].y, ps[2].z);
+    fprintf(fp, "f 1 2 3\n");
+    fclose(fp);
+  }
   // struct ivec3_s min, max;
   // min = max = GridTr_get_grid_cell_for_p(ps[0], g.cell_size);
   // for (int i = 1; i < 4; i++) {

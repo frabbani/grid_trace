@@ -21,6 +21,17 @@ uint64 ivec3_fnv1a(struct ivec3_s v) {
   h ^= (uint64)z;
   h *= 1099511628211ull;
   return h;
+  // const uint64 FNV_OFFSET = 1469598103934665603ull;
+  // const uint64 FNV_PRIME = 1099511628211ull;
+
+  // uint64 h = FNV_OFFSET;
+  // const uint8 *p = (const uint8 *)&v;
+
+  // for (size_t i = 0; i < sizeof(v); i++) {
+  //   h ^= p[i];
+  //   h *= FNV_PRIME;
+  // }
+  // return h;
 }
 
 struct ivec3_s ivec3_min(struct ivec3_s a, struct ivec3_s b) {
