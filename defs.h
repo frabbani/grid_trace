@@ -100,3 +100,11 @@ extern void freemem(void *ptr);
 
 #define GridTr_oftype(t) #t
 // clang-format on
+
+struct ssplit_s {
+  char buf[256];
+  char *toks[32];
+  int num_toks;
+};
+
+void GridTr_ssplit(const char *str, const char *delims, struct ssplit_s *split);

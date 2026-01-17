@@ -1,4 +1,4 @@
-#include "vec.h"
+#include "vecdefs.h"
 
 // point a vector from p0 to p1 using vec3_sub()
 #define point_vec(p0, p1) vec3_sub(p1, p0)

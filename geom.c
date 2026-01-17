@@ -1,5 +1,5 @@
 #include "geom.h"
-
+#include "vec.inl"
 #include <math.h>
 
 struct GridTr_plane_s GridTr_create_plane(struct vec3_s n, struct vec3_s p) {
@@ -137,8 +137,8 @@ void GridTr_find_exts(const struct vec3_s *ps, uint num_ps, struct vec3_s *min,
 
 void GridTr_aabb_init(struct GridTr_aabb_s *aabb, struct vec3_s min,
                       struct vec3_s max) {
-  aabb->min = vec3_min(min, max);
-  aabb->max = vec3_max(min, max);
+  aabb->min = min; // vec3_min(min, max);
+  aabb->max = max; // vec3_max(min, max);
   aabb->halfsize = vec3_mul(vec3_sub(aabb->max, aabb->min), 0.5f);
   aabb->o = vec3_add(aabb->min, aabb->halfsize);
   aabb->radius = vec3_len(aabb->halfsize);

@@ -21,6 +21,8 @@ struct GridTr_grid_s {
 
 void GridTr_grid_cell_dtor(void *ptr);
 struct ivec3_s GridTr_get_grid_cell_for_p(struct vec3_s p, float cell_size);
+void GridTr_get_exts_for_grid_cell(struct ivec3_s crl, float cell_size,
+                                   struct vec3_s *min, struct vec3_s *max);
 void GridTr_get_aabb_for_grid_cell(struct ivec3_s crl, float cell_size,
                                    struct GridTr_aabb_s *aabb);
 void GridTr_get_collider_grid_cell_exts(
@@ -45,14 +47,12 @@ void GridTr_get_colliders_for_cell(const struct GridTr_grid_s *grid,
 const void **GridTr_grid_get_all_grid_cells(const struct GridTr_grid_s *grid,
                                             uint32 *num_cells);
 
-struct GridTr_trace_s {
-  struct GridTr_rayseg_s rayseg;
-  struct vec3_s p;
-  float t;
-  struct ivec3_s cell;
-  struct ivec3_s starting_cell;
-  uint32 collider;
-};
+// return true if cb wants to exit early
+typedef bool (*GridTr_trace_cb)(const struct GridTr_grid_s *grid,
+                                const struct GridTr_rayseg_s *rayseg,
+                                const struct ivec3_s crl, void *user_data);
 
-void GridTr_grid_trace(const struct GridTr_grid_s *grid,
-                       struct GridTr_trace_s *trace);
+// returns true if cb exited early
+bool GridTr_trace_ray_through_grid(const struct GridTr_grid_s *grid,
+                                   struct GridTr_rayseg_s *rayseg,
+                                   GridTr_trace_cb cb, void *user_data);

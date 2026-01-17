@@ -1,4 +1,6 @@
 #include "grid.h"
+#include "vec.inl"
+
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -44,18 +46,37 @@ struct ivec3_s GridTr_get_grid_cell_for_p(struct vec3_s p, float cell_size) {
   return crl;
 }
 
+void GridTr_get_exts_for_grid_cell(struct ivec3_s crl, float cell_size,
+                                   struct vec3_s *min, struct vec3_s *max) {
+  if (!min || !max) {
+    return;
+  }
+  float x = (float)crl.x * cell_size;
+  float y = (float)crl.y * cell_size;
+  float z = (float)crl.z * cell_size;
+  min->x = x;
+  min->y = y;
+  min->z = z;
+  max->x = x + cell_size;
+  max->y = y + cell_size;
+  max->z = z + cell_size;
+}
+
 void GridTr_get_aabb_for_grid_cell(struct ivec3_s crl, float cell_size,
                                    struct GridTr_aabb_s *aabb) {
   if (!aabb) {
     return;
   }
   struct vec3_s min, max;
-  min.x = crl.x * cell_size;
-  min.y = crl.y * cell_size;
-  min.z = crl.z * cell_size;
-  max.x = (crl.x + 1) * cell_size;
-  max.y = (crl.y + 1) * cell_size;
-  max.z = (crl.z + 1) * cell_size;
+  float x = (float)crl.x * cell_size;
+  float y = (float)crl.y * cell_size;
+  float z = (float)crl.z * cell_size;
+  min.x = x;
+  min.y = y;
+  min.z = z;
+  max.x = x + cell_size;
+  max.y = y + cell_size;
+  max.z = z + cell_size;
   GridTr_aabb_init(aabb, min, max);
 }
 
@@ -192,4 +213,90 @@ const void **GridTr_grid_get_all_grid_cells(const struct GridTr_grid_s *grid,
     return NULL;
   }
   return GridTr_hash_table_get_all_ro(grid->cell_table, num_cells);
+}
+
+// NOTE: assumes rayseg->o is inside the cell defined by crl
+static bool GridTr_step_ray_through_grid_cell(const struct GridTr_grid_s *grid,
+                                              struct GridTr_rayseg_s *rayseg,
+                                              struct ivec3_s *crl) {
+  struct vec3_s cmin, cmax;
+  GridTr_get_exts_for_grid_cell(*crl, grid->cell_size, &cmin, &cmax);
+
+  const float dx = rayseg->d.x;
+  const float dy = rayseg->d.y;
+  const float dz = rayseg->d.z;
+
+  // Distance along ray (t) to the next boundary on each axis
+  float tx = INFINITY, ty = INFINITY, tz = INFINITY;
+
+  if (dx > 0.0f)
+    tx = (cmax.x - rayseg->o.x) / dx;
+  else if (dx < 0.0f)
+    tx = (cmin.x - rayseg->o.x) / dx; // dx negative => positive tx
+
+  if (dy > 0.0f)
+    ty = (cmax.y - rayseg->o.y) / dy;
+  else if (dy < 0.0f)
+    ty = (cmin.y - rayseg->o.y) / dy;
+
+  if (dz > 0.0f)
+    tz = (cmax.z - rayseg->o.z) / dz;
+  else if (dz < 0.0f)
+    tz = (cmin.z - rayseg->o.z) / dz;
+
+  float t = tx;
+  if (ty < t)
+    t = ty;
+  if (tz < t)
+    t = tz;
+  // If we're basically at a boundary already, avoid zero-step stuckness
+  if (t < 0.0f)
+    t = 0.0f;
+
+  float t_step = t + TOL;
+  if (t_step >= rayseg->len)
+    return false;
+
+  // Advance origin by delta = d * t
+  rayseg->o.x += dx * t_step;
+  rayseg->o.y += dy * t_step;
+  rayseg->o.z += dz * t_step;
+  rayseg->len -= t_step;
+
+  // Step cell indices. If ties, we crossed an edge/corner -> step multiple
+  // axes.
+  if (fabsf(tx - t) <= TOL)
+    crl->x += (dx < 0.0f) ? -1 : 1;
+  if (fabsf(ty - t) <= TOL)
+    crl->y += (dy < 0.0f) ? -1 : 1;
+  if (fabsf(tz - t) <= TOL)
+    crl->z += (dz < 0.0f) ? -1 : 1;
+  return true;
+}
+
+// returns true if cb returns true (early exit)
+bool GridTr_trace_ray_through_grid(const struct GridTr_grid_s *grid,
+                                   struct GridTr_rayseg_s *rayseg,
+                                   GridTr_trace_cb cb, void *user_data) {
+  if (!cb || !grid || !rayseg) {
+    printf("<%s> - invalid argument(s)\n", __FUNCTION__);
+    return false;
+  }
+  if (rayseg->len <= 0.0f) {
+    return false;
+  }
+
+  struct ivec3_s crl = GridTr_get_grid_cell_for_p(rayseg->o, grid->cell_size);
+
+  bool marching = true;
+  while (marching) {
+    if (cb(grid, rayseg, crl, user_data)) {
+      return true;
+    }
+    if (rayseg->len > 0.0f) {
+      marching = GridTr_step_ray_through_grid_cell(grid, rayseg, &crl);
+    } else
+      break;
+  }
+  return false;
 }

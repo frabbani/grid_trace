@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "vec.inl"
+
 #include "export_obj.h"
 #include "gc.h"
 #include "hash.h"

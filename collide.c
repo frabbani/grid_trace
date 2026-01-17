@@ -1,4 +1,6 @@
 #include "collide.h"
+#include "vec.inl"
+
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
