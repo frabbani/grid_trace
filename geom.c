@@ -29,7 +29,7 @@ struct GridTr_rayseg_s GridTr_create_rayseg(struct vec3_s p0,
     return seg;
   }
   seg.len = sqrtf(seg.len);
-  vec3_mul(seg.d, 1.0f / seg.len);
+  seg.d = vec3_mul(seg.d, 1.0f / seg.len);
   return seg;
 }
 

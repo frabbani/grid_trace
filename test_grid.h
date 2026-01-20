@@ -138,10 +138,65 @@ void grid_test_add_single_collider() {
   GridTr_destroy_grid(&g);
 }
 
+struct grid_user_data_1 {
+  uint32 num_aabbs, max_aabbs;
+  struct GridTr_aabb_s *aabbs;
+};
+
+bool grid_march_cb(const struct GridTr_grid_s *grid,
+                   const struct GridTr_rayseg_s *rayseg,
+                   const struct ivec3_s crl, void *user_data) {
+  // This callback is called for each grid cell the ray intersects.
+  // You can implement your own logic here.
+  struct grid_user_data_1 *data = (struct grid_user_data_1 *)user_data;
+  struct GridTr_aabb_s aabb;
+  GridTr_get_aabb_for_grid_cell(crl, grid->cell_size, &aabb);
+  MAYBE_RESIZE_FIX(data->aabbs, data->num_aabbs, data->max_aabbs,
+                   sizeof(struct GridTr_aabb_s), 16);
+  data->aabbs[data->num_aabbs++] = aabb;
+  // printf(" * <%d, %d, %d> - ray o/e: <%f, %f, %f> / <%f, %f, %f> len: %f, "
+  //        "AABB min/max: %.1f %.1f %.1f / %.1f %.1f %.1f\n",
+  //        crl.x, crl.y, crl.z, rayseg->o.x, rayseg->o.y, rayseg->o.z,
+  //        rayseg->e.x, rayseg->e.y, rayseg->e.z, rayseg->len, aabb.min.x,
+  //        aabb.min.y, aabb.min.z, aabb.max.x, aabb.max.y, aabb.max.z);
+  printf(" * <%d, %d, %d> - ray o/e: <%f, %f, %f> / <%f, %f, %f> len: %f\n",
+         crl.x, crl.y, crl.z, rayseg->o.x, rayseg->o.y, rayseg->o.z,
+         rayseg->e.x, rayseg->e.y, rayseg->e.z, rayseg->len);
+  return false; // Return true to exit early.
+}
+
+void grid_test_march_through_grid() {
+  struct GridTr_grid_s g;
+  memset(&g, 0, sizeof(struct GridTr_grid_s));
+  GridTr_create_grid(&g, 5.0f);
+
+  struct grid_user_data_1 data;
+  data.num_aabbs = 0;
+  data.max_aabbs = 16;
+  data.aabbs = GridTr_new(sizeof(struct GridTr_aabb_s) * data.max_aabbs);
+
+  struct GridTr_rayseg_s rayseg = GridTr_create_rayseg(
+      vec3_set(-15.0f, -15.0f, -15.0f), vec3_set(+15.0f, +15.0f, +15.0f));
+  struct ivec3_s crl0 = GridTr_get_grid_cell_for_p(rayseg.o, g.cell_size);
+  struct ivec3_s crl1 = GridTr_get_grid_cell_for_p(rayseg.e, g.cell_size);
+
+  printf("ray origin...: <%f, %f, %f>\n", rayseg.o.x, rayseg.o.y, rayseg.o.z);
+  printf("ray end......: <%f, %f, %f>\n", rayseg.e.x, rayseg.e.y, rayseg.e.z);
+  printf("ray length...: %f\n", rayseg.len);
+  printf("ray CRL BEGIN: %d %d %d\n", crl0.x, crl0.y, crl0.z);
+  printf("ray CRL END..: %d %d %d\n", crl1.x, crl1.y, crl1.z);
+
+  GridTr_trace_ray_through_grid(&g, &rayseg, grid_march_cb, &data);
+  printf("# of AABBs: %d\n", data.num_aabbs);
+  GridTr_free(data.aabbs);
+  GridTr_destroy_grid(&g);
+}
+
 void run_grid_tests() {
   printf("[grid] begin tests:\n");
   test_create_and_destroy_grid();
   test_grid_calcs();
   grid_test_add_single_collider();
+  grid_test_march_through_grid();
   printf("[grid] tests run: %d, failed: %d\n", g_tests_run, g_tests_failed);
 }

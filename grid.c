@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#define TIE_EPS(t) (TOL * (1.0f + (t)))
+
 /*
 #define GRID_MAX 1000000
 #define GRID_DIM (2 * GRID_MAX + 1)
@@ -215,10 +217,13 @@ const void **GridTr_grid_get_all_grid_cells(const struct GridTr_grid_s *grid,
   return GridTr_hash_table_get_all_ro(grid->cell_table, num_cells);
 }
 
-// NOTE: assumes rayseg->o is inside the cell defined by crl
+// GridTr_step_ray_through_grid_cell:
+// * assumes rayseg->o is inside the cell defined by crl
+// * clips the ray end to the cell boundaries
 static bool GridTr_step_ray_through_grid_cell(const struct GridTr_grid_s *grid,
                                               struct GridTr_rayseg_s *rayseg,
                                               struct ivec3_s *crl) {
+
   struct vec3_s cmin, cmax;
   GridTr_get_exts_for_grid_cell(*crl, grid->cell_size, &cmin, &cmax);
 
@@ -229,19 +234,20 @@ static bool GridTr_step_ray_through_grid_cell(const struct GridTr_grid_s *grid,
   // Distance along ray (t) to the next boundary on each axis
   float tx = INFINITY, ty = INFINITY, tz = INFINITY;
 
-  if (dx > 0.0f)
+  const float dir_eps = 1e-12f;
+  if (dx > dir_eps)
     tx = (cmax.x - rayseg->o.x) / dx;
-  else if (dx < 0.0f)
+  else if (dx < -dir_eps)
     tx = (cmin.x - rayseg->o.x) / dx; // dx negative => positive tx
 
-  if (dy > 0.0f)
+  if (dy > dir_eps)
     ty = (cmax.y - rayseg->o.y) / dy;
-  else if (dy < 0.0f)
+  else if (dy < -dir_eps)
     ty = (cmin.y - rayseg->o.y) / dy;
 
-  if (dz > 0.0f)
+  if (dz > dir_eps)
     tz = (cmax.z - rayseg->o.z) / dz;
-  else if (dz < 0.0f)
+  else if (dz < -dir_eps)
     tz = (cmin.z - rayseg->o.z) / dz;
 
   float t = tx;
@@ -249,54 +255,65 @@ static bool GridTr_step_ray_through_grid_cell(const struct GridTr_grid_s *grid,
     t = ty;
   if (tz < t)
     t = tz;
-  // If we're basically at a boundary already, avoid zero-step stuckness
   if (t < 0.0f)
     t = 0.0f;
 
-  float t_step = t + TOL;
-  if (t_step >= rayseg->len)
+  if (t >= rayseg->len) {
     return false;
+  }
 
-  // Advance origin by delta = d * t
-  rayseg->o.x += dx * t_step;
-  rayseg->o.y += dy * t_step;
-  rayseg->o.z += dz * t_step;
-  rayseg->len -= t_step;
+  rayseg->e = vec3_add(rayseg->o, vec3_mul(rayseg->d, t));
+  rayseg->len = t;
 
   // Step cell indices. If ties, we crossed an edge/corner -> step multiple
   // axes.
-  if (fabsf(tx - t) <= TOL)
+  float eps = TIE_EPS(t);
+  if (fabsf(tx - t) <= eps) {
     crl->x += (dx < 0.0f) ? -1 : 1;
-  if (fabsf(ty - t) <= TOL)
+  }
+  if (fabsf(ty - t) <= eps) {
     crl->y += (dy < 0.0f) ? -1 : 1;
-  if (fabsf(tz - t) <= TOL)
+  }
+  if (fabsf(tz - t) <= eps) {
     crl->z += (dz < 0.0f) ? -1 : 1;
+  }
   return true;
 }
 
 // returns true if cb returns true (early exit)
 bool GridTr_trace_ray_through_grid(const struct GridTr_grid_s *grid,
-                                   struct GridTr_rayseg_s *rayseg,
+                                   const struct GridTr_rayseg_s *rayseg,
                                    GridTr_trace_cb cb, void *user_data) {
   if (!cb || !grid || !rayseg) {
     printf("<%s> - invalid argument(s)\n", __FUNCTION__);
     return false;
   }
-  if (rayseg->len <= 0.0f) {
+  float eps = TIE_EPS(grid->cell_size) * 10.0f;
+
+  if (rayseg->len <= eps) {
     return false;
   }
 
+  struct vec3_s o = rayseg->o;
+  float remaining = rayseg->len;
   struct ivec3_s crl = GridTr_get_grid_cell_for_p(rayseg->o, grid->cell_size);
 
-  bool marching = true;
-  while (marching) {
-    if (cb(grid, rayseg, crl, user_data)) {
+  while (remaining >= eps) {
+    struct GridTr_rayseg_s r = {0};
+    r.o = o;
+    r.d = rayseg->d;
+    r.e = rayseg->e;
+    r.len = remaining;
+    bool hit_boundary = GridTr_step_ray_through_grid_cell(grid, &r, &crl);
+    if (cb(grid, &r, crl, user_data)) {
       return true;
     }
-    if (rayseg->len > 0.0f) {
-      marching = GridTr_step_ray_through_grid_cell(grid, rayseg, &crl);
-    } else
-      break;
+    if (!hit_boundary) {
+      return false;
+    }
+    float nudge_eps = TIE_EPS(r.len);
+    o = vec3_add(r.e, vec3_mul(r.d, nudge_eps));
+    remaining -= r.len;
   }
   return false;
 }

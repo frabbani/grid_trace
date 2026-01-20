@@ -148,8 +148,8 @@ int main(int argc, char *args[]) {
   // run_hash_table_tests();
   // run_gc_tests();
   // run_collide_tests();
-  // run_grid_tests();
-  test_export();
+  run_grid_tests();
+  // test_export();
 
   printf("***************\n");
   printf("allocation stats:\n");

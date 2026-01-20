@@ -54,5 +54,5 @@ typedef bool (*GridTr_trace_cb)(const struct GridTr_grid_s *grid,
 
 // returns true if cb exited early
 bool GridTr_trace_ray_through_grid(const struct GridTr_grid_s *grid,
-                                   struct GridTr_rayseg_s *rayseg,
+                                   const struct GridTr_rayseg_s *rayseg,
                                    GridTr_trace_cb cb, void *user_data);
