@@ -7,6 +7,8 @@ struct ivec3_s ivec3_set(int x, int y, int z);
 uint64 ivec3_fnv1a(struct ivec3_s v);
 struct ivec3_s ivec3_min(struct ivec3_s a, struct ivec3_s b);
 struct ivec3_s ivec3_max(struct ivec3_s a, struct ivec3_s b);
+struct ivec3_s ivec3_add(struct ivec3_s a, struct ivec3_s b);
+struct ivec3_s ivec3_sub(struct ivec3_s a, struct ivec3_s b);
 
 struct vec2_s vec2_set(float x, float y);
 

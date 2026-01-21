@@ -33,6 +33,10 @@ static bool v3eq(struct vec3_s a, struct vec3_s b, float eps) {
   return feq(a.x, b.x, eps) && feq(a.y, b.y, eps) && feq(a.z, b.z, eps);
 }
 
+static bool iv3eq(struct ivec3_s a, struct ivec3_s b) {
+  return a.x == b.x && a.y == b.y && a.z == b.z;
+}
+
 #define ASSERT_FEQ(a, b)                                                       \
   do {                                                                         \
     g_tests_run++;                                                             \
@@ -107,4 +111,16 @@ static bool v3eq(struct vec3_s a, struct vec3_s b, float eps) {
     }                                                                          \
   } while (0)
 
+#define ASSERT_IV3EQ(a, b)                                                     \
+  do {                                                                         \
+    g_tests_run++;                                                             \
+    struct ivec3_s _aa = (a), _bb = (b);                                       \
+    if (!iv3eq(_aa, _bb)) {                                                    \
+      g_tests_failed++;                                                        \
+      printf(                                                                  \
+          "[FAIL] %s:%d: ASSERT_IV3EQ(%s,%s) got (%d %d %d) vs (%d %d %d)\n",  \
+          __FILE__, __LINE__, #a, #b, _aa.x, _aa.y, _aa.z, _bb.x, _bb.y,       \
+          _bb.z);                                                              \
+    }                                                                          \
+  } while (0)
 // add a blank line to avoid backslash newline warning

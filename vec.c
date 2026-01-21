@@ -49,6 +49,22 @@ struct ivec3_s ivec3_max(struct ivec3_s a, struct ivec3_s b) {
   return r;
 }
 
+struct ivec3_s ivec3_add(struct ivec3_s a, struct ivec3_s b) {
+  struct ivec3_s r;
+  r.x = a.x + b.x;
+  r.y = a.y + b.y;
+  r.z = a.z + b.z;
+  return r;
+}
+
+struct ivec3_s ivec3_sub(struct ivec3_s a, struct ivec3_s b) {
+  struct ivec3_s r;
+  r.x = a.x - b.x;
+  r.y = a.y - b.y;
+  r.z = a.z - b.z;
+  return r;
+}
+
 struct vec2_s vec2_set(float x, float y) {
   struct vec2_s v;
   v.x = x;
