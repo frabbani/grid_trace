@@ -110,7 +110,7 @@ void test_export() {
   ps[1] = vec3_set(+6.0f, -6.0f, 1.0f);
   ps[2] = vec3_set(+0.0f, +6.0f, 1.0f);
 
-  fp = fopen("export/collider.obj", "w");
+  fp = fopen("export/test_collider.obj", "w");
   if (fp) {
     fprintf(fp, "v %f %f %f\n", ps[0].x, ps[0].y, ps[0].z);
     fprintf(fp, "v %f %f %f\n", ps[1].x, ps[1].y, ps[1].z);
@@ -132,19 +132,10 @@ void test_export() {
   int num_ps = sizeof(ps) / sizeof(struct vec3_s);
   GridTr_create_collider(&coll, 123, ps, num_ps, plane);
   GridTr_add_collider_to_grid(&g, &coll);
-  GridTr_export_grid_boxes_to_obj(&g, "export/boxes.obj");
+  GridTr_export_grid_boxes_to_obj(&g, "export/test_boxes.obj");
 
   GridTr_destroy_collider(&coll);
   GridTr_destroy_grid(&g);
-}
-
-void test_loading() {
-  struct GridTr_collider_s *colls = NULL;
-  int n = 0;
-  GridTr_load_colliders_from_obj(&colls, &n, "colliders.obj");
-  for (int i = 0; i < n; i++)
-    GridTr_destroy_collider(&colls[i]);
-  GridTr_free(colls);
 }
 
 int main(int argc, char *args[]) {
@@ -157,7 +148,6 @@ int main(int argc, char *args[]) {
   // run_collide_tests();
   run_grid_tests();
   test_export();
-  test_loading();
 
   printf("***************\n");
   printf("allocation stats:\n");

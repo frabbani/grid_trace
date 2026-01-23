@@ -1,4 +1,4 @@
-#include "grid.h"
+#include "export.h" //include grid.h
 #include "testing.h"
 #include <stdint.h>
 #include <stdlib.h>
@@ -138,6 +138,54 @@ void grid_test_add_single_collider() {
   GridTr_destroy_grid(&g);
 }
 
+void grid_test_add_multiple_colliders() {
+  struct GridTr_collider_s *colls = NULL;
+  int n = 0;
+  GridTr_load_colliders_from_obj(&colls, &n, "colliders.obj");
+  ASSERT_EQ_U(n, 12); // make sure we're loading the correct colliders
+
+  struct GridTr_grid_s g;
+  GridTr_create_grid(&g, 1.0f);
+  for (int i = 0; i < n; i++) {
+    GridTr_add_collider_to_grid(&g, &colls[i]);
+  }
+  for (int i = 0; i < n; i++)
+    GridTr_destroy_collider(&colls[i]);
+  GridTr_free(colls);
+
+  ASSERT_EQ_U(g.colliders->num_elems, (uint32)n);
+  const void **cell_ptrs = GridTr_grid_get_all_grid_cells(&g, &n);
+  ASSERT_EQ_U(5, (uint32)n);
+
+  struct ivec3_s crls[5];
+  crls[0] = ivec3_set(-2, 0, 0);
+  crls[1] = ivec3_set(3, 1, 3);
+  crls[2] = ivec3_set(3, 2, 3);
+  crls[3] = ivec3_set(2, 1, 3);
+  crls[4] = ivec3_set(2, 2, 3);
+  uint counts[] = {6, 6, 6, 6, 6}; // each cell has 6 colliders because straddle
+  int found = 0;
+  for (int i = 0; i < 5; i++) {
+    const struct GridTr_grid_cell_s *cell =
+        (const struct GridTr_grid_cell_s *)cell_ptrs[i];
+    ASSERT_TRUE(cell != NULL);
+    struct ivec3_s cell_crl = cell->crl;
+    for (int j = 0; j < 5; j++) {
+      if (cell_crl.x == crls[j].x && cell_crl.y == crls[j].y &&
+          cell_crl.z == crls[j].z) {
+        ASSERT_EQ_U(cell->num_colliders, counts[j]);
+        found++;
+      }
+    }
+  }
+  ASSERT_EQ_I(found, 5);
+
+  GridTr_export_grid_boxes_to_obj(&g, "export/boxes_for_many_colliders.obj");
+  void *p = (void *)cell_ptrs;
+  GridTr_free(p);
+  GridTr_destroy_grid(&g);
+}
+
 struct grid_user_data_1 {
   uint32 num_cells;
   struct ivec3_s *crls;
@@ -194,6 +242,7 @@ void run_grid_tests() {
   test_create_and_destroy_grid();
   test_grid_calcs();
   grid_test_add_single_collider();
+  grid_test_add_multiple_colliders();
   grid_test_march_through_grid();
   printf("[grid] tests run: %d, failed: %d\n", g_tests_run, g_tests_failed);
 }

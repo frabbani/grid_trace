@@ -210,18 +210,17 @@ bool GridTr_load_colliders_from_obj(struct GridTr_collider_s **colliders,
                                     uint32 *num_colliders,
                                     const char *filename) {
   if (!colliders || !num_colliders || !filename) {
-    printf("<%s> - missing parameter (OBJ file name '%s')\n", __FUNCTION__,
-           filename);
+    printf("<%s> - missing parameter(s) (file '%s')\n", __FUNCTION__, filename);
     return false;
   }
   FILE *fp = fopen(filename, "r");
   if (!fp) {
-    printf("<%s> - Failed to open OBJfile '%s'\n", __FUNCTION__, filename);
+    printf("<%s> - Failed to open OBJ file '%s'\n", __FUNCTION__, filename);
     return false;
   }
 
-  printf("<%s> - Loading colliders from OBJ file '%s'\n", __FUNCTION__,
-         filename);
+  // printf("<%s> - Loading colliders from OBJ file '%s'\n", __FUNCTION__,
+  //        filename);
 
   uint32 num_vs = 0;
   uint32 num_fs = 0;
@@ -276,14 +275,16 @@ bool GridTr_load_colliders_from_obj(struct GridTr_collider_s **colliders,
       struct GridTr_plane_s plane =
           GridTr_create_plane(vec3_cross(u, v), ps[0]);
       GridTr_create_collider(collider, i, ps, num_ps, plane);
-      printf(" * collider %d: %d edges | plane: <%.4f, %.4f, %.4f | %.4f>\n", i,
-             collider->edge_count, plane.n.x, plane.n.y, plane.n.z, plane.dist);
+      // printf(" * collider %d: %d edges | plane: <%.4f, %.4f, %.4f | %.4f>\n",
+      // i,
+      //        collider->edge_count, plane.n.x, plane.n.y, plane.n.z,
+      //        plane.dist);
     }
   }
   GridTr_free(vs);
 
-  printf("<%s> - %u colliders created from OBJ file '%s'\n", __FUNCTION__,
-         num_fs, filename);
+  // printf("<%s> - %u colliders created from OBJ file '%s'\n", __FUNCTION__,
+  //        num_fs, filename);
   fclose(fp);
   return true;
 }
