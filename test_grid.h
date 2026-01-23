@@ -189,6 +189,8 @@ void grid_test_add_multiple_colliders() {
 struct grid_user_data_1 {
   uint32 num_cells;
   struct ivec3_s *crls;
+  struct GridTr_rayseg_s *raysegs;
+  uint32 exit_cell;
 };
 
 bool grid_march_cb(const struct GridTr_grid_cell_s *cell, struct ivec3_s crl,
@@ -200,11 +202,15 @@ bool grid_march_cb(const struct GridTr_grid_cell_s *cell, struct ivec3_s crl,
   ASSERT_TRUE(cell == NULL);
   ASSERT_TRUE(rayseg != NULL);
   ASSERT_TRUE(colliders != NULL);
-  ASSERT_IV3EQ(crl, data->crls[data->num_cells++]);
+  ASSERT_IV3EQ(crl, data->crls[data->num_cells]);
+  ASSERT_V3EQ(rayseg->o, data->raysegs[data->num_cells].o);
+  ASSERT_V3EQ(rayseg->e, data->raysegs[data->num_cells].e);
+  ASSERT_FEQ(rayseg->len, data->raysegs[data->num_cells].len);
   // printf(" * <%d, %d, %d> - ray o/e: <%f, %f, %f> / <%f, %f, %f> len: %f\n",
   //        crl.x, crl.y, crl.z, rayseg->o.x, rayseg->o.y, rayseg->o.z,
   //        rayseg->e.x, rayseg->e.y, rayseg->e.z, rayseg->len);
-  return false; // Return true to exit early.
+  data->num_cells++;
+  return data->exit_cell == (data->num_cells - 1); // Return true to exit early.
 }
 
 void grid_test_march_through_grid() {
@@ -214,7 +220,9 @@ void grid_test_march_through_grid() {
 
   struct grid_user_data_1 data;
   data.num_cells = 0;
+  data.exit_cell = 999;
   data.crls = GridTr_new(sizeof(struct ivec3_s) * 64);
+  data.raysegs = GridTr_new(sizeof(struct GridTr_rayseg_s) * 64);
 
   struct GridTr_rayseg_s rayseg = GridTr_create_rayseg(
       vec3_set(15.0f, 15.0f, 15.0f), vec3_set(-15.0f, -15.0f, -15.0f));
@@ -225,6 +233,22 @@ void grid_test_march_through_grid() {
     data.crls[i] = ivec3_set(crl0.x - i, crl0.y - i, crl0.z - i);
   }
 
+  int i = 0;
+  data.raysegs[i++] = GridTr_create_rayseg(vec3_set(15.0f, 15.0f, 15.0f),
+                                           vec3_set(15.0f, 15.0f, 15.0f));
+  data.raysegs[i++] = GridTr_create_rayseg(vec3_set(15.0f, 15.0f, 15.0f),
+                                           vec3_set(10.0f, 10.0f, 10.0f));
+  data.raysegs[i++] = GridTr_create_rayseg(vec3_set(10.0f, 10.0f, 10.0f),
+                                           vec3_set(5.0f, 5.0f, 5.0f));
+  data.raysegs[i++] = GridTr_create_rayseg(vec3_set(5.0f, 5.0f, 5.0f),
+                                           vec3_set(0.0f, 0.0f, 0.0f));
+  data.raysegs[i++] = GridTr_create_rayseg(vec3_set(0.0f, 0.0f, 0.0f),
+                                           vec3_set(-5.0f, -5.0f, -5.0f));
+  data.raysegs[i++] = GridTr_create_rayseg(vec3_set(-5.0f, -5.0f, -5.0f),
+                                           vec3_set(-10.0f, -10.0f, -10.0f));
+  data.raysegs[i++] = GridTr_create_rayseg(vec3_set(-10.0f, -10.0f, -10.0f),
+                                           vec3_set(-15.0f, -15.0f, -15.0f));
+
   // printf("ray origin...: <%f, %f, %f>\n", rayseg.o.x, rayseg.o.y,
   // rayseg.o.z); printf("ray end......: <%f, %f, %f>\n", rayseg.e.x,
   // rayseg.e.y, rayseg.e.z); printf("ray length...: %f\n", rayseg.len);
@@ -233,7 +257,14 @@ void grid_test_march_through_grid() {
 
   GridTr_trace_ray_through_grid(&g, &rayseg, grid_march_cb, &data);
   ASSERT_EQ_U(data.num_cells, 7);
+
+  data.num_cells = 0;
+  data.exit_cell = 2;
+  GridTr_trace_ray_through_grid(&g, &rayseg, grid_march_cb, &data);
+  ASSERT_EQ_U(data.num_cells, 3); // exit early
+
   GridTr_free(data.crls);
+  GridTr_free(data.raysegs);
   GridTr_destroy_grid(&g);
 }
 
