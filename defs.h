@@ -95,7 +95,7 @@ extern void *allocmem(size_t size, const char *file, int line);
 extern void freemem(void *ptr);
 
 #define PTR_SZ (sizeof(void *))
-#define GridTr_new(size)  allocmem(size, __FILE__, __LINE__) // potentially replace with custom allocator
+#define GridTr_new(size)  allocmem(size, __FILE__, __LINE__)
 #define GridTr_free(ptr) do{ if(ptr){freemem(ptr); ptr = NULL; } } while(0)
 
 #define GridTr_oftype(t) #t

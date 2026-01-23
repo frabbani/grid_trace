@@ -7,21 +7,6 @@
 
 #define TIE_EPS(t) (TOL * (1.0f + (t)))
 
-/*
-#define GRID_MAX 1000000
-#define GRID_DIM (2 * GRID_MAX + 1)
-#define GRID_KEY(v, k)                                                         \
-  do {                                                                         \
-    int32 x = CLAMP(v.x, -GRID_MAX, +GRID_MAX);                                \
-    int32 y = CLAMP(v.y, -GRID_MAX, +GRID_MAX);                                \
-    int32 z = CLAMP(v.z, -GRID_MAX, +GRID_MAX);                                \
-    uint64 ux = (uint64)(x + GRID_MAX);                                        \
-    uint64 uy = (uint64)(y + GRID_MAX);                                        \
-    uint64 uz = (uint64)(z + GRID_MAX);                                        \
-    k = ux + uy * GRID_DIM + uz * GRID_DIM * GRID_DIM;                         \
-  } while (0);
-*/
-
 static void GridTr_grid_cell_add_collider_idx(struct GridTr_grid_cell_s *cell,
                                               uint32 collider_idx) {
   if (!cell)
@@ -305,15 +290,20 @@ bool GridTr_trace_ray_through_grid(const struct GridTr_grid_s *grid,
   struct ivec3_s crl = GridTr_get_grid_cell_for_p(rayseg->o, grid->cell_size);
 
   while (remaining >= eps) {
-    printf("remaining: %f\n", remaining);
+    // printf("remaining: %f\n", remaining);
     struct GridTr_rayseg_s r = {0};
     r.o = o;
     r.d = rayseg->d;
     r.e = rayseg->e;
     r.len = remaining;
     struct ivec3_s crl_next = crl;
+    // printf(" --- <%d, %d, %d>\n", crl.x, crl.y, crl.z);
     bool hit_boundary = GridTr_step_ray_through_grid_cell(grid, &r, &crl_next);
-    if (cb(grid, &r, crl, user_data)) {
+
+    const struct GridTr_grid_cell_s *cell =
+        GridTr_grid_get_grid_cell_ro(grid, crl);
+    const struct GridTr_collider_s *colliders = grid->colliders->data;
+    if (cb(cell, crl, &r, colliders, user_data)) {
       return true;
     }
     if (!hit_boundary) {

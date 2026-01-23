@@ -17,5 +17,9 @@ char *GridTr_export_shape_to_obj_str(const struct GridTr_shape_s *shape,
 
 void GridTr_free_shape(struct GridTr_shape_s *shape);
 
-void GridTr_export_grid_to_obj(const struct GridTr_grid_s *grid,
-                               const char *filename);
+void GridTr_export_grid_boxes_to_obj(const struct GridTr_grid_s *grid,
+                                     const char *filename);
+
+bool GridTr_load_colliders_from_obj(struct GridTr_collider_s **colliders,
+                                    uint32 *num_colliders,
+                                    const char *filename);

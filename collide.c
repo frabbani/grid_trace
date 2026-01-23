@@ -65,8 +65,8 @@ void GridTr_collider_dtor(void *ptr) {
   GridTr_destroy_collider((struct GridTr_collider_s *)ptr);
 }
 
-void GridTr_create_collider(struct GridTr_collider_s *collider, uint id,
-                            const struct vec3_s *ps, uint nps,
+void GridTr_create_collider(struct GridTr_collider_s *collider, uint32 id,
+                            const struct vec3_s *ps, uint32 nps,
                             struct GridTr_plane_s plane) {
   if (!collider || !ps || nps < 3)
     return;
@@ -203,5 +203,87 @@ bool GridTr_collider_touches_aabb(const struct GridTr_collider_s *collider,
   }
 #undef TEST_SAT
 
+  return true;
+}
+
+bool GridTr_load_colliders_from_obj(struct GridTr_collider_s **colliders,
+                                    uint32 *num_colliders,
+                                    const char *filename) {
+  if (!colliders || !num_colliders || !filename) {
+    printf("<%s> - missing parameter (OBJ file name '%s')\n", __FUNCTION__,
+           filename);
+    return false;
+  }
+  FILE *fp = fopen(filename, "r");
+  if (!fp) {
+    printf("<%s> - Failed to open OBJfile '%s'\n", __FUNCTION__, filename);
+    return false;
+  }
+
+  printf("<%s> - Loading colliders from OBJ file '%s'\n", __FUNCTION__,
+         filename);
+
+  uint32 num_vs = 0;
+  uint32 num_fs = 0;
+  char line[256];
+  while (fgets(line, sizeof(line), fp)) {
+    // Parse the line and extract vertex/face information
+    if (line[0] == 'v' && line[1] == ' ') {
+      ++num_vs;
+    } else if (line[0] == 'f' && line[1] == ' ') {
+      ++num_fs;
+    }
+  }
+  fseek(fp, 0, SEEK_SET);
+
+  struct vec3_s *vs = GridTr_new(sizeof(struct vec3_s) * num_vs);
+  *colliders = GridTr_new(sizeof(struct GridTr_collider_s) * num_fs);
+  *num_colliders = num_fs;
+
+  int i = 0;
+  while (fgets(line, sizeof(line), fp)) {
+    // Parse the line and extract vertex/face information
+    if (line[0] == 'v' && line[1] == ' ') {
+      struct vec3_s *v = &vs[i++];
+      // Parse vertex information
+      sscanf(line + 2, "%f %f %f", &v->x, &v->y, &v->z);
+    }
+  }
+  fseek(fp, 0, SEEK_SET);
+
+  i = 0;
+  while (fgets(line, sizeof(line), fp)) {
+    if (line[0] == 'f' && line[1] == ' ') {
+      // Parse face information and create a collider
+      struct GridTr_collider_s *collider = &(*colliders)[i++];
+      struct vec3_s ps[8];
+      uint num_ps = 0;
+      char *tok = strtok(line + 2, " ");
+      while (tok) {
+        for (char *p = tok; *p != '\0'; p++) {
+          if (*p == '/') {
+            *p = '\0';
+            break;
+          }
+        }
+        int idx = atoi(tok) - 1;
+        ps[num_ps++] = vs[idx];
+        tok = strtok(NULL, " \n");
+      }
+      struct vec3_s u, v;
+      u = point_vec(ps[0], ps[1]);
+      v = point_vec(ps[0], ps[2]);
+      struct GridTr_plane_s plane =
+          GridTr_create_plane(vec3_cross(u, v), ps[0]);
+      GridTr_create_collider(collider, i, ps, num_ps, plane);
+      printf(" * collider %d: %d edges | plane: <%.4f, %.4f, %.4f | %.4f>\n", i,
+             collider->edge_count, plane.n.x, plane.n.y, plane.n.z, plane.dist);
+    }
+  }
+  GridTr_free(vs);
+
+  printf("<%s> - %u colliders created from OBJ file '%s'\n", __FUNCTION__,
+         num_fs, filename);
+  fclose(fp);
   return true;
 }

@@ -123,4 +123,5 @@ static bool iv3eq(struct ivec3_s a, struct ivec3_s b) {
           _bb.z);                                                              \
     }                                                                          \
   } while (0)
+
 // add a blank line to avoid backslash newline warning

@@ -48,9 +48,11 @@ const void **GridTr_grid_get_all_grid_cells(const struct GridTr_grid_s *grid,
                                             uint32 *num_cells);
 
 // return true if cb wants to exit early
-typedef bool (*GridTr_trace_cb)(const struct GridTr_grid_s *grid,
+typedef bool (*GridTr_trace_cb)(const struct GridTr_grid_cell_s *cell,
+                                struct ivec3_s crl,
                                 const struct GridTr_rayseg_s *rayseg,
-                                const struct ivec3_s crl, void *user_data);
+                                const struct GridTr_collider_s *colliders,
+                                void *user_data);
 
 // returns true if cb exited early
 bool GridTr_trace_ray_through_grid(const struct GridTr_grid_s *grid,

@@ -1,4 +1,4 @@
-#include "export_obj.h"
+#include "export.h"
 #include "vec.inl"
 
 #include <stdio.h>
@@ -115,8 +115,8 @@ void GridTr_free_shape(struct GridTr_shape_s *shape) {
   }
 }
 
-void GridTr_export_grid_to_obj(const struct GridTr_grid_s *grid,
-                               const char *filename) {
+void GridTr_export_grid_boxes_to_obj(const struct GridTr_grid_s *grid,
+                                     const char *filename) {
   if (!grid || !filename) {
     return;
   }

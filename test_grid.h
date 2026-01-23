@@ -139,17 +139,20 @@ void grid_test_add_single_collider() {
 }
 
 struct grid_user_data_1 {
-  uint32 num_aabbs;
+  uint32 num_cells;
   struct ivec3_s *crls;
 };
 
-bool grid_march_cb(const struct GridTr_grid_s *grid,
+bool grid_march_cb(const struct GridTr_grid_cell_s *cell, struct ivec3_s crl,
                    const struct GridTr_rayseg_s *rayseg,
-                   const struct ivec3_s crl, void *user_data) {
+                   const struct GridTr_collider_s *colliders, void *user_data) {
   // This callback is called for each grid cell the ray intersects.
   // You can implement your own logic here.
   struct grid_user_data_1 *data = (struct grid_user_data_1 *)user_data;
-  data->crls[data->num_aabbs++] = crl;
+  ASSERT_TRUE(cell == NULL);
+  ASSERT_TRUE(rayseg != NULL);
+  ASSERT_TRUE(colliders != NULL);
+  ASSERT_IV3EQ(crl, data->crls[data->num_cells++]);
   // printf(" * <%d, %d, %d> - ray o/e: <%f, %f, %f> / <%f, %f, %f> len: %f\n",
   //        crl.x, crl.y, crl.z, rayseg->o.x, rayseg->o.y, rayseg->o.z,
   //        rayseg->e.x, rayseg->e.y, rayseg->e.z, rayseg->len);
@@ -162,13 +165,17 @@ void grid_test_march_through_grid() {
   GridTr_create_grid(&g, 5.0f);
 
   struct grid_user_data_1 data;
-  data.num_aabbs = 0;
+  data.num_cells = 0;
   data.crls = GridTr_new(sizeof(struct ivec3_s) * 64);
 
   struct GridTr_rayseg_s rayseg = GridTr_create_rayseg(
       vec3_set(15.0f, 15.0f, 15.0f), vec3_set(-15.0f, -15.0f, -15.0f));
   struct ivec3_s crl0 = GridTr_get_grid_cell_for_p(rayseg.o, g.cell_size);
   struct ivec3_s crl1 = GridTr_get_grid_cell_for_p(rayseg.e, g.cell_size);
+
+  for (int i = 0; i < 7; i++) {
+    data.crls[i] = ivec3_set(crl0.x - i, crl0.y - i, crl0.z - i);
+  }
 
   // printf("ray origin...: <%f, %f, %f>\n", rayseg.o.x, rayseg.o.y,
   // rayseg.o.z); printf("ray end......: <%f, %f, %f>\n", rayseg.e.x,
@@ -177,10 +184,7 @@ void grid_test_march_through_grid() {
   // printf("ray CRL END..: %d %d %d\n", crl1.x, crl1.y, crl1.z);
 
   GridTr_trace_ray_through_grid(&g, &rayseg, grid_march_cb, &data);
-  ASSERT_EQ_U(data.num_aabbs, 7);
-  for (int i = 0; i < 7; i++) {
-    struct ivec3_s crl = ivec3_sub(crl0, ivec3_set(-i, -i, -i));
-  }
+  ASSERT_EQ_U(data.num_cells, 7);
   GridTr_free(data.crls);
   GridTr_destroy_grid(&g);
 }

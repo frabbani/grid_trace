@@ -5,13 +5,11 @@
 
 #include "vec.inl"
 
-#include "export_obj.h"
-#include "gc.h"
+#include "export.h"
 #include "hash.h"
 
 #include "test_array.h"
 #include "test_collide.h"
-#include "test_gc.h"
 // #include "test_geom.h"
 // #include "test_hash.h"
 #include "test_grid.h"
@@ -98,7 +96,7 @@ void test_export() {
   GridTr_load_shape_from_obj(&box, "cube.obj");
   char *str =
       GridTr_export_shape_to_obj_str(&box, vec3_set(0.0f, 0.0f, 0.0f), 5.0f, 0);
-  FILE *fp = fopen("test.obj", "w");
+  FILE *fp = fopen("export/shape.obj", "w");
   if (fp) {
     fputs(str, fp);
     fclose(fp);
@@ -112,7 +110,7 @@ void test_export() {
   ps[1] = vec3_set(+6.0f, -6.0f, 1.0f);
   ps[2] = vec3_set(+0.0f, +6.0f, 1.0f);
 
-  fp = fopen("shape_output.obj", "w");
+  fp = fopen("export/collider.obj", "w");
   if (fp) {
     fprintf(fp, "v %f %f %f\n", ps[0].x, ps[0].y, ps[0].z);
     fprintf(fp, "v %f %f %f\n", ps[1].x, ps[1].y, ps[1].z);
@@ -120,13 +118,13 @@ void test_export() {
     fprintf(fp, "f 1 2 3\n");
     fclose(fp);
   }
-  // struct ivec3_s min, max;
-  // min = max = GridTr_get_grid_cell_for_p(ps[0], g.cell_size);
-  // for (int i = 1; i < 4; i++) {
-  //   struct ivec3_s crl = GridTr_get_grid_cell_for_p(ps[i], g.cell_size);
-  //   min = ivec3_min(min, crl);
-  //   max = ivec3_max(max, crl);
-  // }
+  struct ivec3_s min, max;
+  min = max = GridTr_get_grid_cell_for_p(ps[0], g.cell_size);
+  for (int i = 1; i < 4; i++) {
+    struct ivec3_s crl = GridTr_get_grid_cell_for_p(ps[i], g.cell_size);
+    min = ivec3_min(min, crl);
+    max = ivec3_max(max, crl);
+  }
 
   struct vec3_s n =
       vec3_cross(point_vec(ps[0], ps[1]), point_vec(ps[0], ps[2]));
@@ -134,10 +132,19 @@ void test_export() {
   int num_ps = sizeof(ps) / sizeof(struct vec3_s);
   GridTr_create_collider(&coll, 123, ps, num_ps, plane);
   GridTr_add_collider_to_grid(&g, &coll);
-  GridTr_export_grid_to_obj(&g, "output.obj");
+  GridTr_export_grid_boxes_to_obj(&g, "export/boxes.obj");
 
   GridTr_destroy_collider(&coll);
   GridTr_destroy_grid(&g);
+}
+
+void test_loading() {
+  struct GridTr_collider_s *colls = NULL;
+  int n = 0;
+  GridTr_load_colliders_from_obj(&colls, &n, "colliders.obj");
+  for (int i = 0; i < n; i++)
+    GridTr_destroy_collider(&colls[i]);
+  GridTr_free(colls);
 }
 
 int main(int argc, char *args[]) {
@@ -149,7 +156,8 @@ int main(int argc, char *args[]) {
   // run_gc_tests();
   // run_collide_tests();
   run_grid_tests();
-  // test_export();
+  test_export();
+  test_loading();
 
   printf("***************\n");
   printf("allocation stats:\n");

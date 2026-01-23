@@ -20,11 +20,11 @@ void GridTr_sat_setas(struct GridTr_sat_s *sat, struct vec3_s o,
                       bool first);
 
 struct GridTr_collider_s {
-  uint poly_id;
+  uint32 poly_id;
   struct GridTr_plane_s plane;
   struct vec3_s o;
   float radius;
-  uint edge_count;
+  uint32 edge_count;
   struct GridTr_plane_s *edge_planes;
   float *edge_lens;
   struct vec3_s *ps;
@@ -32,8 +32,8 @@ struct GridTr_collider_s {
 };
 
 // assumes points are in counter-clockwise order and form a convex polygon
-void GridTr_create_collider(struct GridTr_collider_s *collider, uint id,
-                            const struct vec3_s *ps, uint nps,
+void GridTr_create_collider(struct GridTr_collider_s *collider, uint32 id,
+                            const struct vec3_s *ps, uint32 nps,
                             struct GridTr_plane_s plane);
 
 void GridTr_destroy_collider(struct GridTr_collider_s *collider);
@@ -45,3 +45,7 @@ void GridTr_copy_collider(struct GridTr_collider_s *to,
                           const struct GridTr_collider_s *from);
 
 void GridTr_collider_dtor(void *ptr);
+
+bool GridTr_load_colliders_from_obj(struct GridTr_collider_s **colliders,
+                                    uint32 *num_colliders,
+                                    const char *filename);
