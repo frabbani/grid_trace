@@ -47,7 +47,7 @@ for src in "${SRCS[@]}"; do
 done
 
 echo " * static archive: $BUILD/libgrid_trace.a"
-ar rcs "$BUILD/libgridtrace.a" "${OBJS[@]}"
+ar rcs "$BUILD/libgrid_trace.a" "${OBJS[@]}"
 
 if [ "$TARGET_MINGW" -eq 1 ]; then
   # Produce a Windows DLL and import library (for mingw-w64)
