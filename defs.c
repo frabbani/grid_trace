@@ -1,10 +1,16 @@
 #include "defs.h"
+#include <pthread.h>
+#include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-uint32 g_total_mem = 0;
-uint32 g_requested_mem = 0;
+/* allocator bookkeeping - counters are atomic, list mutations are protected
+ * by g_alloc_lock. This keeps common counter updates lock-free while making
+ * dynamic list operations thread-safe on POSIX (msys2) systems.
+ */
+atomic_uint_fast32_t g_total_mem = 0;
+atomic_uint_fast32_t g_requested_mem = 0;
 struct alloc_s {
   uint64 addr;
   size_t size;
@@ -13,14 +19,21 @@ struct alloc_s {
 };
 
 struct alloc_s *g_alloc_list = NULL;
-uint32 g_num_allocs = 0, g_max_allocs = 0;
-uint32 g_total_allocs = 0;
+uint32 g_num_allocs = 0, g_max_allocs = 0; /* protected by g_alloc_lock */
+atomic_uint_fast32_t g_total_allocs = 0;
+
+static pthread_mutex_t g_alloc_lock = PTHREAD_MUTEX_INITIALIZER;
 
 void *GridTr_allocmem(size_t size, const char *file, int line) {
-  g_total_mem += size;
-  g_requested_mem += size;
-  g_total_allocs++;
+  /* update simple counters atomically */
+  atomic_fetch_add(&g_total_mem, (uint32)size);
+  atomic_fetch_add(&g_requested_mem, (uint32)size);
+  atomic_fetch_add(&g_total_allocs, 1);
+
   void *p = malloc(size);
+
+  /* protect list resize and append with mutex */
+  pthread_mutex_lock(&g_alloc_lock);
   if (g_num_allocs == g_max_allocs) {
     g_max_allocs += 4096;
     struct alloc_s *new_list = malloc(sizeof(struct alloc_s) * g_max_allocs);
@@ -32,43 +45,57 @@ void *GridTr_allocmem(size_t size, const char *file, int line) {
   }
   g_alloc_list[g_num_allocs] = (struct alloc_s){(uint64)p, size, file, line};
   g_num_allocs++;
+  pthread_mutex_unlock(&g_alloc_lock);
   return p;
 }
 
 void GridTr_freemem(void *ptr) {
+  pthread_mutex_lock(&g_alloc_lock);
   for (uint i = 0; i < g_num_allocs; i++) {
     if (g_alloc_list[i].addr == (uint64)ptr) {
-      g_total_mem -= g_alloc_list[i].size;
+      /* adjust counter atomically, then remove entry under lock */
+      atomic_fetch_sub(&g_total_mem, (uint32)g_alloc_list[i].size);
       g_alloc_list[i] = g_alloc_list[g_num_allocs - 1];
       g_alloc_list[g_num_allocs - 1].addr = 0;
       g_alloc_list[g_num_allocs - 1].size = 0;
       g_alloc_list[g_num_allocs - 1].file = NULL;
       g_alloc_list[g_num_allocs - 1].line = 0;
       g_num_allocs--;
+      pthread_mutex_unlock(&g_alloc_lock);
       free(ptr);
       return;
     }
   }
+  pthread_mutex_unlock(&g_alloc_lock);
   printf("freemem: untracked pointer or double-free\n", ptr);
 }
 
 void GridTr_prmemstats(void) {
   printf("***************\n");
   printf("allocation stats:\n");
+
+  uint32 total_mem = (uint32)atomic_load(&g_total_mem);
+  uint32 requested = (uint32)atomic_load(&g_requested_mem);
+  uint32 total_allocs_local = (uint32)atomic_load(&g_total_allocs);
+
   printf(" * net memory (current).............: %f kbs %s\n",
-         (float)g_total_mem / 1024.0f, g_total_mem ? "[X]" : "[OK]");
+         (float)total_mem / 1024.0f, total_mem ? "[X]" : "[OK]");
+
+  pthread_mutex_lock(&g_alloc_lock);
   printf(" * net allocation count (current)...: %u %s\n", g_num_allocs,
          g_num_allocs ? "[X]" : "[OK]");
 
   printf(" * total requested memory (lifetime): %f kbs\n",
-         (float)g_requested_mem / 1024.0f);
+         (float)requested / 1024.0f);
   if (g_num_allocs > 0) {
     for (uint i = 0; i < g_num_allocs; i++) {
       struct alloc_s *a = &g_alloc_list[i];
       printf("    - LEAK: size %zu @ %s:%d\n", a->size, a->file, a->line);
     }
   }
-  printf(" * total allocation count (lifetime): %u\n", g_total_allocs);
+  pthread_mutex_unlock(&g_alloc_lock);
+
+  printf(" * total allocation count (lifetime): %u\n", total_allocs_local);
   printf("***************\n");
 }
 
