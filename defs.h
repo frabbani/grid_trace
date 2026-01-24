@@ -63,7 +63,17 @@ typedef void (*GridTr_move_func)(void *, void *);
 #define TOL 1e-6f
 #define TOL_SQ 1e-12f
 
+extern void *GridTr_allocmem(size_t size, const char *file, int line);
+extern void GridTr_freemem(void *ptr);
+extern void GridTr_prmemstats(void);
+
 // clang-format off
+
+#define PTR_SZ (sizeof(void *))
+#define GridTr_new(size)  GridTr_allocmem(size, __FILE__, __LINE__)
+#define GridTr_free(ptr) do{ if(ptr){GridTr_freemem(ptr); ptr = NULL; } } while(0)
+#define GridTr_oftype(t) #t
+
 #define MAYBE_RESIZE(data, n, max, sz)                                         \
   do {                                                                         \
     if (n >= max) {                                                            \
@@ -71,36 +81,25 @@ typedef void (*GridTr_move_func)(void *, void *);
       void *new_ptr = GridTr_new(max * sz);                                    \
       if (data) {                                                              \
         memcpy(new_ptr, data, n * sz);                                         \
-        GridTr_free(data);                                                            \
+        GridTr_free(data);                                                     \
       }                                                                        \
       data = new_ptr;                                                          \
     }                                                                          \
   } while (0)
 
-#define MAYBE_RESIZE_FIX(data, n, max, sz, gr)                                         \
+#define MAYBE_RESIZE_FIX(data, n, max, sz, gr)                                 \
   do {                                                                         \
     if (n >= max) {                                                            \
       max = MAX(max + gr, 4);                                                  \
       void *new_ptr = GridTr_new(max * sz);                                    \
       if (data) {                                                              \
         memcpy(new_ptr, data, n * sz);                                         \
-        GridTr_free(data);                                                            \
+        GridTr_free(data);                                                     \
       }                                                                        \
       data = new_ptr;                                                          \
     }                                                                          \
   } while (0)
 
-
-extern void *GridTr_allocmem(size_t size, const char *file, int line);
-extern void GridTr_freemem(void *ptr);
-extern void GridTr_prmemstats(void);
-
-// clang-format off
-#define PTR_SZ (sizeof(void *))
-#define GridTr_new(size)  GridTr_allocmem(size, __FILE__, __LINE__)
-#define GridTr_free(ptr) do{ if(ptr){GridTr_freemem(ptr); ptr = NULL; } } while(0)
-
-#define GridTr_oftype(t) #t
 // clang-format on
 
 // reentrant strtok

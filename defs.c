@@ -60,7 +60,7 @@ void GridTr_prmemstats(void) {
   printf(" * net allocation count (current)...: %u %s\n", g_num_allocs,
          g_num_allocs ? "[X]" : "[OK]");
 
-  printf(" * total requested memory (lifetime): %f kbs %s\n",
+  printf(" * total requested memory (lifetime): %f kbs\n",
          (float)g_requested_mem / 1024.0f);
   if (g_num_allocs > 0) {
     for (uint i = 0; i < g_num_allocs; i++) {
