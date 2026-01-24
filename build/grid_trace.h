@@ -1,6 +1,5 @@
 /* Auto-generated public header for grid_trace.
- * Inlines core public headers (excluding tests). Do not modify — regenerate
- * from repo.
+ * Inlines core public headers. Do not modify!
  */
 
 #ifndef GRID_TRACE_H
