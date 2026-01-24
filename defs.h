@@ -91,20 +91,17 @@ typedef void (*GridTr_move_func)(void *, void *);
   } while (0)
 
 
-extern void *allocmem(size_t size, const char *file, int line);
-extern void freemem(void *ptr);
+extern void *GridTr_allocmem(size_t size, const char *file, int line);
+extern void GridTr_freemem(void *ptr);
+extern void GridTr_prmemstats(void);
 
+// clang-format off
 #define PTR_SZ (sizeof(void *))
-#define GridTr_new(size)  allocmem(size, __FILE__, __LINE__)
-#define GridTr_free(ptr) do{ if(ptr){freemem(ptr); ptr = NULL; } } while(0)
+#define GridTr_new(size)  GridTr_allocmem(size, __FILE__, __LINE__)
+#define GridTr_free(ptr) do{ if(ptr){GridTr_freemem(ptr); ptr = NULL; } } while(0)
 
 #define GridTr_oftype(t) #t
 // clang-format on
 
-struct ssplit_s {
-  char buf[256];
-  char *toks[32];
-  int num_toks;
-};
-
-void GridTr_ssplit(const char *str, const char *delims, struct ssplit_s *split);
+// reentrant strtok
+char *GridTr_strtok_r(char *str, const char *delims, char **saveptr);

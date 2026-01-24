@@ -197,7 +197,6 @@ bool grid_march_cb(const struct GridTr_grid_cell_s *cell, struct ivec3_s crl,
                    const struct GridTr_rayseg_s *rayseg,
                    const struct GridTr_collider_s *colliders, void *user_data) {
   // This callback is called for each grid cell the ray intersects.
-  // You can implement your own logic here.
   struct grid_user_data_1 *data = (struct grid_user_data_1 *)user_data;
   ASSERT_TRUE(cell == NULL);
   ASSERT_TRUE(rayseg != NULL);
@@ -221,8 +220,8 @@ void grid_test_march_through_grid() {
   struct grid_user_data_1 data;
   data.num_cells = 0;
   data.exit_cell = 999;
-  data.crls = GridTr_new(sizeof(struct ivec3_s) * 64);
-  data.raysegs = GridTr_new(sizeof(struct GridTr_rayseg_s) * 64);
+  data.crls = GridTr_new(sizeof(struct ivec3_s) * 32);
+  data.raysegs = GridTr_new(sizeof(struct GridTr_rayseg_s) * 32);
 
   struct GridTr_rayseg_s rayseg = GridTr_create_rayseg(
       vec3_set(15.0f, 15.0f, 15.0f), vec3_set(-15.0f, -15.0f, -15.0f));

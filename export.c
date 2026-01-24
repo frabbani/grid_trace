@@ -49,9 +49,10 @@ void GridTr_load_shape_from_obj(struct GridTr_shape_s *shape,
       // Parse face
       struct ivec3_s face;
       char *toks[3];
-      toks[0] = strtok(line + 2, " ");
-      toks[1] = strtok(NULL, " ");
-      toks[2] = strtok(NULL, " \n");
+      char *ptr;
+      toks[0] = GridTr_strtok_r(line + 2, " ", &ptr);
+      toks[1] = GridTr_strtok_r(NULL, " ", &ptr);
+      toks[2] = GridTr_strtok_r(NULL, " \n", &ptr);
       for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 16; j++) {
           if (toks[i][j] == '/') {
