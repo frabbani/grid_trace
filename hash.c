@@ -175,13 +175,14 @@ GridTr_hash_table_maybe_get_ro(const struct GridTr_hash_table_s *table,
     return NULL;
 
   uint32 bucket = (uint32)(hash % (uint64)table->size);
-
   struct GridTr_array_s *arr = table->entries[bucket];
+
   uint32 n = arr->num_elems;
   for (uint32 i = 0; i < n; i++) {
     const struct GridTr_hash_table_entry_s *e = GridTr_array_get_ro(arr, i);
-    if (e && e->hash == hash)
+    if (e && e->hash == hash) {
       return e->data;
+    }
   }
   return NULL;
 }

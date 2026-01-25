@@ -258,8 +258,8 @@ bool GridTr_load_colliders_from_obj(struct GridTr_collider_s **colliders,
       struct vec3_s ps[8];
       uint num_ps = 0;
 
-      char *saveptr;
-      char *tok = GridTr_strtok_r(line + 2, " ", &saveptr);
+      char *ptr;
+      char *tok = GridTr_strtok_r(line + 2, " ", &ptr);
       while (tok) {
         for (char *p = tok; *p != '\0'; p++) {
           if (*p == '/') {
@@ -269,7 +269,7 @@ bool GridTr_load_colliders_from_obj(struct GridTr_collider_s **colliders,
         }
         int idx = atoi(tok) - 1;
         ps[num_ps++] = vs[idx];
-        tok = GridTr_strtok_r(NULL, " \n", &saveptr);
+        tok = GridTr_strtok_r(NULL, " \n", &ptr);
       }
       struct vec3_s u, v;
       u = point_vec(ps[0], ps[1]);

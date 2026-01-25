@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <string.h>
 
+extern bool GridTr_debug_enabled();
+
 #define TIE_EPS(t) (TOL * (1.0f + (t)))
 
 static void GridTr_grid_cell_add_collider_idx(struct GridTr_grid_cell_s *cell,
@@ -177,7 +179,6 @@ struct GridTr_grid_cell_s *GridTr_grid_get_grid_cell(struct GridTr_grid_s *grid,
       return *cell;
     }
   }
-
   return NULL;
 }
 
@@ -284,25 +285,36 @@ bool GridTr_trace_ray_through_grid(const struct GridTr_grid_s *grid,
   if (rayseg->len <= eps) {
     return false;
   }
+  const struct GridTr_collider_s *colliders = grid->colliders->data;
 
   struct vec3_s o = rayseg->o;
   float remaining = rayseg->len;
   struct ivec3_s crl = GridTr_get_grid_cell_for_p(rayseg->o, grid->cell_size);
 
+  bool debug = false; // GridTr_debug_enabled();
+  if (debug) {
+    printf("<%s> - begin tracing ray\n", __FUNCTION__);
+  }
+  int steps = 0;
   while (remaining >= eps) {
-    // printf("remaining: %f\n", remaining);
+    ++steps;
     struct GridTr_rayseg_s r = {0};
     r.o = o;
     r.d = rayseg->d;
     r.e = rayseg->e;
     r.len = remaining;
     struct ivec3_s crl_next = crl;
-    // printf(" --- <%d, %d, %d>\n", crl.x, crl.y, crl.z);
+    if (debug) {
+      printf(" --- [%d, %d, %d] (%f remaining)\n", crl.x, crl.y, crl.z,
+             remaining);
+    }
     bool hit_boundary = GridTr_step_ray_through_grid_cell(grid, &r, &crl_next);
-
+    if (debug) {
+      printf(" +++ stepped to [%d, %d, %d] (%f len)\n", crl_next.x, crl_next.y,
+             crl_next.z, r.len);
+    }
     const struct GridTr_grid_cell_s *cell =
         GridTr_grid_get_grid_cell_ro(grid, crl);
-    const struct GridTr_collider_s *colliders = grid->colliders->data;
     if (cb(cell, crl, &r, colliders, user_data)) {
       return true;
     }
@@ -314,5 +326,9 @@ bool GridTr_trace_ray_through_grid(const struct GridTr_grid_s *grid,
     remaining -= r.len;
     crl = crl_next;
   }
+  if (debug) {
+    printf("<%s> - finished tracing ray (%d steps)\n", __FUNCTION__, steps);
+  }
+
   return false;
 }

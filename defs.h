@@ -63,6 +63,7 @@ typedef void (*GridTr_move_func)(void *, void *);
 #define TOL 1e-6f
 #define TOL_SQ 1e-12f
 
+// thread safe!
 extern void *GridTr_allocmem(size_t size, const char *file, int line);
 extern void GridTr_freemem(void *ptr);
 extern void GridTr_prmemstats(void);

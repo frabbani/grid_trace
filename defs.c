@@ -107,6 +107,17 @@ static int is_delim(unsigned char c, const char *delims) {
   return 0;
 }
 
+bool GridTr_debug_enabled() {
+  FILE *fp = fopen("gridtr_enable_debug_print.txt", "r");
+  if (fp) {
+    char c = fgetc(fp);
+    bool yes = (c == '1' || c == 'y' || c == 'Y');
+    fclose(fp);
+    return yes;
+  }
+  return false;
+}
+
 char *GridTr_strtok_r(char *str, const char *delims, char **saveptr) {
   if (!delims || !saveptr)
     return NULL;
